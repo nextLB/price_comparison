@@ -1,0 +1,44 @@
+{% extends 'core/base.html' %}
+{% block title %}{% if user %}编辑{% else %}新增{% endif %}用户{% endblock %}
+
+{% block content %}
+<h2>{% if user %}编辑{% else %}新增{% endif %}用户</h2>
+<form method="post" class="col-md-6">
+    {% csrf_token %}
+    <div class="mb-3">
+        <label class="form-label">用户名</label>
+        <input type="text" name="username" class="form-control" required>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">密码</label>
+        <input type="password" name="password" class="form-control" {% if not user %}required{% endif %}>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">邮箱</label>
+        <input type="email" name="email" class="form-control">
+    </div>
+    <div class="mb-3">
+        <label class="form-label">用户类型</label>
+        <select name="user_type" class="form-select">
+            <option value="sales">销售人员</option>
+            <option value="manager">部门经理</option>
+            <option value="admin">系统管理员</option>
+        </select>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">部门</label>
+        <select name="department" class="form-select">
+            <option value="">请选择</option>
+            {% for dept in departments %}
+            <option value="{{ dept.id }}">{{ dept.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">电话</label>
+        <input type="text" name="phone" class="form-control">
+    </div>
+    <button type="submit" class="btn btn-primary">保存</button>
+    <a href="{% url 'user_list' %}" class="btn btn-secondary">返回</a>
+</form>
+{% endblock %}

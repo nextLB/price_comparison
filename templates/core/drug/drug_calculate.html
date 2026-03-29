@@ -1,0 +1,30 @@
+{% extends 'core/base.html' %}
+{% block title %}计算差比价{% endblock %}
+
+{% block content %}
+<h2>计算差比价</h2>
+<form method="post" class="col-md-6">
+    {% csrf_token %}
+    <div class="mb-3">
+        <label class="form-label">标准品选择方式</label>
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="basis" value="max" id="basisMax" checked>
+            <label class="form-check-label" for="basisMax">挂网价最高</label>
+        </div>
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="basis" value="min" id="basisMin">
+            <label class="form-check-label" for="basisMin">挂网价最低</label>
+        </div>
+    </div>
+    <div class="alert alert-info">
+        <p><strong>说明：</strong></p>
+        <ul>
+            <li>计算时会将同医保目录名、同标化持有人的药品作为"二同药品"进行差比价计算</li>
+            <li>如果没有同医保目录名，则使用同通用名进行计算</li>
+            <li>系统会自动识别西药和中成药，使用不同的计算公式</li>
+        </ul>
+    </div>
+    <button type="submit" class="btn btn-primary">开始计算</button>
+    <a href="{% url 'drug_list' %}" class="btn btn-secondary">返回</a>
+</form>
+{% endblock %}

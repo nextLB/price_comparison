@@ -1,0 +1,34 @@
+{% extends 'core/base.html' %}
+{% block title %}药店管理{% endblock %}
+
+{% block content %}
+<h2>药店列表</h2>
+<a href="{% url 'pharmacy_import' %}" class="btn btn-primary mb-3">导入药店</a>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>药店编码</th>
+            <th>药店名称</th>
+            <th>医保编码</th>
+            <th>区县</th>
+            <th>地址</th>
+            <th>电话</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for p in page_obj %}
+        <tr>
+            <td>{{ p.pharmacy_code }}</td>
+            <td>{{ p.pharmacy_name }}</td>
+            <td>{{ p.medical_insurance_code }}</td>
+            <td>{{ p.district }}</td>
+            <td>{{ p.address|default:'-' }}</td>
+            <td>{{ p.phone|default:'-' }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="text-center">暂无数据</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

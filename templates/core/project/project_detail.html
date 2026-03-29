@@ -1,0 +1,58 @@
+{% extends 'core/base.html' %}
+{% block title %}项目详情 - {{ project.name }}{% endblock %}
+
+{% block content %}
+<h2>项目详情</h2>
+<div class="card">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <p><strong>项目名称：</strong>{{ project.name }}</p>
+                <p><strong>项目编码：</strong>{{ project.code }}</p>
+                <p><strong>客户：</strong>{{ project.customer.name|default:'-' }}</p>
+                <p><strong>预算：</strong>{{ project.budget }}</p>
+            </div>
+            <div class="col-md-6">
+                <p><strong>状态：</strong>{{ project.get_status_display }}</p>
+                <p><strong>开始日期：</strong>{{ project.start_date|default:'-' }}</p>
+                <p><strong>结束日期：</strong>{{ project.end_date|default:'-' }}</p>
+                <p><strong>负责人：</strong>{{ project.owner.username|default:'-' }}</p>
+            </div>
+        </div>
+        <p><strong>项目描述：</strong></p>
+        <p>{{ project.description|default:'无' }}</p>
+    </div>
+</div>
+
+<h4 class="mt-4">跟进记录</h4>
+<table class="table table-sm">
+    <thead><tr><th>主题</th><th>方式</th><th>状态</th><th>时间</th></tr></thead>
+    <tbody>
+        {% for f in follow_ups %}<tr><td>{{ f.subject }}</td><td>{{ f.get_follow_type_display }}</td><td>{{ f.get_status_display }}</td><td>{{ f.created_at|date:"Y-m-d" }}</td></tr>
+        {% empty %}<tr><td colspan="4" class="text-center">暂无</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h4 class="mt-4">出差记录</h4>
+<table class="table table-sm">
+    <thead><tr><th>目的地</th><th>开始日期</th><th>结束日期</th><th>状态</th></tr></thead>
+    <tbody>
+        {% for t in trips %}<tr><td>{{ t.destination }}</td><td>{{ t.start_date }}</td><td>{{ t.end_date }}</td><td>{{ t.get_status_display }}</td></tr>
+        {% empty %}<tr><td colspan="4" class="text-center">暂无</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h4 class="mt-4">费用记录</h4>
+<table class="table table-sm">
+    <thead><tr><th>费用类型</th><th>金额</th><th>日期</th><th>状态</th></tr></thead>
+    <tbody>
+        {% for e in expenses %}<tr><td>{{ e.get_expense_type_display }}</td><td>{{ e.amount }}</td><td>{{ e.expense_date }}</td><td>{{ e.get_status_display }}</td></tr>
+        {% empty %}<tr><td colspan="4" class="text-center">暂无</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<a href="{% url 'project_list' %}" class="btn btn-secondary mt-3">返回</a>
+{% endblock %}

@@ -1,0 +1,126 @@
+{% extends 'core/base.html' %}
+{% block title %}客户详情 - {{ customer.name }}{% endblock %}
+
+{% block content %}
+<h2>客户详情</h2>
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">基本信息</div>
+            <div class="card-body">
+                <p><strong>客户名称：</strong>{{ customer.name }}</p>
+                <p><strong>客户编码：</strong>{{ customer.code }}</p>
+                <p><strong>行业：</strong>{{ customer.industry|default:'-' }}</p>
+                <p><strong>级别：</strong>{{ customer.level|default:'-' }}</p>
+                <p><strong>状态：</strong>{{ customer.get_status_display }}</p>
+                <p><strong>来源：</strong>{{ customer.get_source_display|default:'-' }}</p>
+                <p><strong>地址：</strong>{{ customer.address|default:'-' }}</p>
+                <p><strong>网站：</strong>{{ customer.website|default:'-' }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">描述</div>
+            <div class="card-body">
+                <p>{{ customer.description|default:'无' }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <h4>联系人</h4>
+        <a href="{% url 'contact_create' %}" class="btn btn-sm btn-primary mb-2">新增联系人</a>
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>姓名</th>
+                    <th>职位</th>
+                    <th>电话</th>
+                    <th>手机</th>
+                    <th>邮箱</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for contact in contacts %}
+                <tr>
+                    <td>{{ contact.name }}</td>
+                    <td>{{ contact.position|default:'-' }}</td>
+                    <td>{{ contact.phone|default:'-' }}</td>
+                    <td>{{ contact.mobile|default:'-' }}</td>
+                    <td>{{ contact.email|default:'-' }}</td>
+                    <td>
+                        <a href="{% url 'contact_edit' contact.id %}" class="btn btn-sm btn-info">编辑</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="text-center">暂无联系人</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <h4>最近跟进</h4>
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>主题</th>
+                    <th>跟进方式</th>
+                    <th>状态</th>
+                    <th>跟进人</th>
+                    <th>时间</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for follow in follow_ups %}
+                <tr>
+                    <td>{{ follow.subject }}</td>
+                    <td>{{ follow.get_follow_type_display }}</td>
+                    <td>{{ follow.get_status_display }}</td>
+                    <td>{{ follow.follower.username|default:'-' }}</td>
+                    <td>{{ follow.created_at|date:"Y-m-d" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="text-center">暂无跟进记录</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <h4>项目</h4>
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>项目名称</th>
+                    <th>状态</th>
+                    <th>预算</th>
+                    <th>负责人</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for project in projects %}
+                <tr>
+                    <td>{{ project.name }}</td>
+                    <td>{{ project.get_status_display }}</td>
+                    <td>{{ project.budget }}</td>
+                    <td>{{ project.owner.username|default:'-' }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="text-center">暂无项目</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<a href="{% url 'customer_list' %}" class="btn btn-secondary mt-3">返回</a>
+{% endblock %}

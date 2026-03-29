@@ -1,0 +1,55 @@
+{% extends 'core/base.html' %}
+{% block title %}申请费用{% endblock %}
+
+{% block content %}
+<h2>申请费用</h2>
+<form method="post" class="col-md-8">
+    {% csrf_token %}
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label class="form-label">项目</label>
+            <select name="project" class="form-select">
+                <option value="">请选择</option>
+                {% for p in projects %}
+                <option value="{{ p.id }}">{{ p.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label class="form-label">出差</label>
+            <select name="trip" class="form-select">
+                <option value="">请选择</option>
+                {% for t in trips %}
+                <option value="{{ t.id }}">{{ t.destination }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label class="form-label">费用类型 *</label>
+            <select name="expense_type" class="form-select" required>
+                <option value="差旅费">差旅费</option>
+                <option value="招待费">招待费</option>
+                <option value="通讯费">通讯费</option>
+                <option value="办公费">办公费</option>
+                <option value="其他">其他</option>
+            </select>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label class="form-label">金额 *</label>
+            <input type="number" name="amount" class="form-control" required>
+        </div>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">费用日期 *</label>
+        <input type="date" name="expense_date" class="form-control" required>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">费用说明 *</label>
+        <textarea name="description" class="form-control" rows="3" required></textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">提交申请</button>
+    <a href="{% url 'expense_list' %}" class="btn btn-secondary">返回</a>
+</form>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends 'core/base.html' %}
+{% block title %}角色表单{% endblock %}
+
+{% block content %}
+<h2>{% if role %}编辑{% else %}新增{% endif %}角色</h2>
+<form method="post" class="col-md-8">
+    {% csrf_token %}
+    <div class="mb-3">
+        <label class="form-label">角色名称</label>
+        <input type="text" name="name" class="form-control" required>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">角色编码</label>
+        <input type="text" name="code" class="form-control" required>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">权限</label>
+        <div class="row">
+            {% for perm in permissions %}
+            <div class="col-md-3">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="permissions" value="{{ perm.id }}" id="perm{{ perm.id }}">
+                    <label class="form-check-label" for="perm{{ perm.id }}">{{ perm.name }}</label>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">描述</label>
+        <textarea name="description" class="form-control" rows="3"></textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">保存</button>
+    <a href="{% url 'role_list' %}" class="btn btn-secondary">返回</a>
+</form>
+{% endblock %}

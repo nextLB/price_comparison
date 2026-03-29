@@ -1,135 +1,83 @@
 {% extends 'core/base.html' %}
 
-{% block title %}控制台 - 医保药品价格检测系统{% endblock %}
-
-{% block nav_items %}
-{% if user.user_type == 'yaoshisuo' %}
-<li class="nav-item"><a class="nav-link" href="{% url 'drug_list' %}">药品查询</a></li>
-<li class="nav-item"><a class="nav-link" href="{% url 'pharmacy_list' %}">药店管理</a></li>
-<li class="nav-item"><a class="nav-link" href="{% url 'company_list' %}">药企管理</a></li>
-{% elif user.user_type == 'yaodian' %}
-<li class="nav-item"><a class="nav-link" href="{% url 'pharmacy_record_submit' %}">备案价提交</a></li>
-<li class="nav-item"><a class="nav-link" href="{% url 'pharmacy_record_list' %}">备案价查询</a></li>
-{% elif user.user_type == 'yaoqi' %}
-<li class="nav-item"><a class="nav-link" href="{% url 'company_record_submit' %}">挂网价申报</a></li>
-<li class="nav-item"><a class="nav-link" href="{% url 'company_record_list' %}">挂网价查询</a></li>
-{% elif user.user_type == 'quxian' %}
-<li class="nav-item"><a class="nav-link" href="{% url 'district_record_review' %}">备案价审核</a></li>
-{% endif %}
-{% endblock %}
+{% block title %}控制台 - 客户跟进管理系统{% endblock %}
 
 {% block sidebar %}
-<div class="p-3">
-    <h5>导航菜单</h5>
-</div>
-{% if user.user_type == 'yaoshisuo' %}
-<a href="{% url 'drug_list' %}">药品查询</a>
-<a href="{% url 'import_drugs' %}">导入药品</a>
-<a href="{% url 'import_anchor_price' %}">导入锚点价格</a>
-<a href="{% url 'calculate_ratio' %}">计算差比价</a>
-<a href="{% url 'pharmacy_list' %}">药店列表</a>
-<a href="{% url 'pharmacy_import' %}">导入药店</a>
-<a href="{% url 'company_list' %}">药企列表</a>
-<a href="{% url 'company_import' %}">导入药企</a>
-<a href="{% url 'pharmacy_record_review' %}">药店备案审核</a>
-{% elif user.user_type == 'yaodian' %}
-<a href="{% url 'pharmacy_record_submit' %}">备案价提交</a>
-<a href="{% url 'pharmacy_record_list' %}">备案价查询</a>
-{% elif user.user_type == 'yaoqi' %}
-<a href="{% url 'company_record_submit' %}">挂网价申报</a>
-<a href="{% url 'company_record_list' %}">挂网价查询</a>
-{% elif user.user_type == 'quxian' %}
-<a href="{% url 'district_record_review' %}">备案价审核</a>
-{% endif %}
+<div class="p-3"><h5>系统菜单</h5></div>
+<a href="{% url 'dashboard' %}">控制台</a>
+
+<h6 class="mt-3 px-3 text-muted">系统管理</h6>
+<a href="{% url 'user_list' %}">用户管理</a>
+<a href="{% url 'role_list' %}">角色管理</a>
+<a href="{% url 'department_list' %}">组织架构</a>
+
+<h6 class="mt-3 px-3 text-muted">客户管理</h6>
+<a href="{% url 'customer_list' %}">客户管理</a>
+<a href="{% url 'contact_list' %}">联系人管理</a>
+
+<h6 class="mt-3 px-3 text-muted">业务管理</h6>
+<a href="{% url 'project_list' %}">项目管理</a>
+<a href="{% url 'followup_list' %}">跟进管理</a>
+<a href="{% url 'trip_list' %}">出差管理</a>
+<a href="{% url 'expense_list' %}">业务费管理</a>
+
+<h6 class="mt-3 px-3 text-muted">药品监测</h6>
+<a href="{% url 'drug_list' %}">药品管理</a>
+<a href="{% url 'pharmacy_list' %}">药店管理</a>
+<a href="{% url 'company_list' %}">药企管理</a>
 {% endblock %}
 
 {% block content %}
 <h2>控制台</h2>
 <div class="row mt-4">
-    {% if user.user_type == 'yaoshisuo' %}
     <div class="col-md-3">
         <div class="card text-white bg-primary">
             <div class="card-body">
-                <h5 class="card-title">药品总数</h5>
-                <h2>{{ drug_count|default:0 }}</h2>
+                <h5 class="card-title">客户总数</h5>
+                <h2>{{ customer_count|default:0 }}</h2>
             </div>
         </div>
     </div>
     <div class="col-md-3">
         <div class="card text-white bg-success">
             <div class="card-body">
-                <h5 class="card-title">药店数量</h5>
-                <h2>{{ pharmacy_count|default:0 }}</h2>
+                <h5 class="card-title">项目总数</h5>
+                <h2>{{ project_count|default:0 }}</h2>
             </div>
         </div>
     </div>
     <div class="col-md-3">
         <div class="card text-white bg-info">
             <div class="card-body">
-                <h5 class="card-title">药企数量</h5>
-                <h2>{{ company_count|default:0 }}</h2>
+                <h5 class="card-title">跟进记录</h5>
+                <h2>{{ followup_count|default:0 }}</h2>
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card text-white bg-danger">
-            <div class="card-body">
-                <h5 class="card-title">异常药品</h5>
-                <h2>{{ abnormal_count|default:0 }}</h2>
-            </div>
-        </div>
-    </div>
-    {% elif user.user_type == 'yaodian' %}
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-body">
-                <h5 class="card-title">我的药店</h5>
-                <p>{{ pharmacy.pharmacy_name|default:"未关联" }}</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-body">
-                <h5 class="card-title">备案记录</h5>
-                <h2>{{ record_count|default:0 }}</h2>
-            </div>
-        </div>
-    </div>
-    {% elif user.user_type == 'yaoqi' %}
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-body">
-                <h5 class="card-title">我的企业</h5>
-                <p>{{ company.company_name|default:"未关联" }}</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-body">
-                <h5 class="card-title">申报记录</h5>
-                <h2>{{ record_count|default:0 }}</h2>
-            </div>
-        </div>
-    </div>
-    {% elif user.user_type == 'quxian' %}
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-body">
-                <h5 class="card-title">所属区县</h5>
-                <p>{{ user.district }}</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6">
         <div class="card text-white bg-warning">
             <div class="card-body">
-                <h5 class="card-title">待审核</h5>
-                <h2>{{ pending_count|default:0 }}</h2>
+                <h5 class="card-title">药品数量</h5>
+                <h2>{{ drug_count|default:0 }}</h2>
             </div>
         </div>
     </div>
-    {% endif %}
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">系统说明</div>
+            <div class="card-body">
+                <p>欢迎使用客户跟进管理系统！</p>
+                <ul>
+                    <li><strong>系统管理：</strong>用户管理、角色管理、组织架构管理</li>
+                    <li><strong>客户管理：</strong>客户信息管理、联系人管理</li>
+                    <li><strong>业务管理：</strong>项目管理、跟进记录、出差申请、业务费用报销</li>
+                    <li><strong>药品监测：</strong>药品差比价计算、药店管理、药企管理</li>
+                </ul>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

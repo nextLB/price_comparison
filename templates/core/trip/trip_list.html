@@ -1,0 +1,49 @@
+{% extends 'core/base.html' %}
+{% block title %}出差管理{% endblock %}
+
+{% block content %}
+<h2>出差管理</h2>
+<a href="{% url 'trip_create' %}" class="btn btn-primary mb-3">申请出差</a>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>申请人</th>
+            <th>项目</th>
+            <th>目的地</th>
+            <th>出差目的</th>
+            <th>开始日期</th>
+            <th>结束日期</th>
+            <th>预计费用</th>
+            <th>状态</th>
+            <th>操作</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for t in page_obj %}
+        <tr>
+            <td>{{ t.user.username }}</td>
+            <td>{{ t.project.name|default:'-' }}</td>
+            <td>{{ t.destination }}</td>
+            <td>{{ t.purpose|truncatechars:20 }}</td>
+            <td>{{ t.start_date }}</td>
+            <td>{{ t.end_date }}</td>
+            <td>{{ t.estimated_cost }}</td>
+            <td>{{ t.get_status_display }}</td>
+            <td>
+                {% if t.status == '已提交' %}
+                <form method="post" style="display:inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="trip_id" value="{{ t.id }}">
+                    <button type="submit" name="action" value="approve" class="btn btn-sm btn-success">通过</button>
+                    <button type="submit" name="action" value="reject" class="btn btn-sm btn-danger">拒绝</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="9" class="text-center">暂无数据</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

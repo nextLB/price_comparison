@@ -1,0 +1,27 @@
+{% extends 'core/base.html' %}
+{% block title %}导入药品{% endblock %}
+
+{% block content %}
+<h2>导入药品数据</h2>
+<form method="post" enctype="multipart/form-data" class="col-md-6">
+    {% csrf_token %}
+    <div class="mb-3">
+        <label class="form-label">选择Excel文件</label>
+        <input type="file" name="excel_file" class="form-control" accept=".xlsx,.xls" required>
+    </div>
+    <div class="alert alert-info">
+        <p><strong>Excel文件需包含以下列：</strong></p>
+        <ul>
+            <li>统编代码（必填）</li>
+            <li>药品分类（必填）</li>
+            <li>通用名（必填）</li>
+            <li>目录剂型、规格包装、含量、装量</li>
+            <li>计价数量、服用天数</li>
+            <li>标化持有人、医保目录名</li>
+            <li>挂网价</li>
+        </ul>
+    </div>
+    <button type="submit" class="btn btn-primary">导入</button>
+    <a href="{% url 'drug_list' %}" class="btn btn-secondary">返回</a>
+</form>
+{% endblock %}

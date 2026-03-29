@@ -1,0 +1,18 @@
+{% extends 'core/base.html' %}
+{% block title %}导入药企{% endblock %}
+
+{% block content %}
+<h2>导入药企</h2>
+<form method="post" enctype="multipart/form-data" class="col-md-6">
+    {% csrf_token %}
+    <div class="mb-3">
+        <label class="form-label">选择Excel文件</label>
+        <input type="file" name="excel_file" class="form-control" accept=".xlsx,.xls" required>
+    </div>
+    <div class="alert alert-info">
+        <p><strong>Excel文件需包含：</strong>机构编码、企业名称、联系人、电话、地址</p>
+    </div>
+    <button type="submit" class="btn btn-primary">导入</button>
+    <a href="{% url 'company_list' %}" class="btn btn-secondary">返回</a>
+</form>
+{% endblock %}

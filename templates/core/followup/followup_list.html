@@ -1,0 +1,41 @@
+{% extends 'core/base.html' %}
+{% block title %}跟进管理{% endblock %}
+
+{% block content %}
+<h2>跟进管理</h2>
+<a href="{% url 'followup_create' %}" class="btn btn-primary mb-3">新增跟进</a>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>客户</th>
+            <th>项目</th>
+            <th>主题</th>
+            <th>跟进方式</th>
+            <th>状态</th>
+            <th>下次跟进日期</th>
+            <th>跟进人</th>
+            <th>操作</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for f in page_obj %}
+        <tr>
+            <td>{{ f.customer.name }}</td>
+            <td>{{ f.project.name|default:'-' }}</td>
+            <td>{{ f.subject }}</td>
+            <td>{{ f.get_follow_type_display }}</td>
+            <td>{{ f.get_status_display }}</td>
+            <td>{{ f.next_date|default:'-' }}</td>
+            <td>{{ f.follower.username|default:'-' }}</td>
+            <td>
+                <a href="{% url 'followup_edit' f.id %}" class="btn btn-sm btn-info">编辑</a>
+                <a href="{% url 'followup_delete' f.id %}" class="btn btn-sm btn-danger" onclick="return confirm('确定删除?')">删除</a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="text-center">暂无数据</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

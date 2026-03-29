@@ -1,31 +1,62 @@
 from django.contrib import admin
-from django.urls import path, include
-from core import views as core_views
+from django.urls import path
+from core import views as v
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', core_views.login_view, name='login'),
-    path('register/', core_views.register_view, name='register'),
-    path('logout/', core_views.logout_view, name='logout'),
-    path('dashboard/', core_views.dashboard, name='dashboard'),
+    path('', v.login_view, name='login'),
+    path('register/', v.register_view, name='register'),
+    path('logout/', v.logout_view, name='logout'),
+    path('dashboard/', v.dashboard, name='dashboard'),
     
-    path('drugs/', core_views.drug_list, name='drug_list'),
-    path('drugs/calculate/', core_views.calculate_ratio, name='calculate_ratio'),
-    path('drugs/import/', core_views.import_drugs, name='import_drugs'),
-    path('drugs/anchor/import/', core_views.import_anchor_price, name='import_anchor_price'),
+    # 系统管理
+    path('system/users/', v.user_list, name='user_list'),
+    path('system/users/create/', v.user_create, name='user_create'),
+    path('system/roles/', v.role_list, name='role_list'),
+    path('system/roles/create/', v.role_create, name='role_create'),
+    path('system/departments/', v.department_list, name='department_list'),
+    path('system/departments/create/', v.department_create, name='department_create'),
     
-    path('pharmacies/', core_views.pharmacy_list, name='pharmacy_list'),
-    path('pharmacies/import/', core_views.pharmacy_import, name='pharmacy_import'),
-    path('pharmacies/records/review/', core_views.pharmacy_record_review, name='pharmacy_record_review'),
+    # 客户管理
+    path('crm/customers/', v.customer_list, name='customer_list'),
+    path('crm/customers/create/', v.customer_create, name='customer_create'),
+    path('crm/customers/<int:pk>/', v.customer_detail, name='customer_detail'),
+    path('crm/customers/<int:pk>/edit/', v.customer_edit, name='customer_edit'),
+    path('crm/customers/<int:pk>/delete/', v.customer_delete, name='customer_delete'),
+    path('crm/contacts/', v.contact_list, name='contact_list'),
+    path('crm/contacts/create/', v.contact_create, name='contact_create'),
+    path('crm/contacts/<int:pk>/edit/', v.contact_edit, name='contact_edit'),
+    path('crm/contacts/<int:pk>/delete/', v.contact_delete, name='contact_delete'),
     
-    path('companies/', core_views.company_list, name='company_list'),
-    path('companies/import/', core_views.company_import, name='company_import'),
+    # 项目管理
+    path('projects/', v.project_list, name='project_list'),
+    path('projects/create/', v.project_create, name='project_create'),
+    path('projects/<int:pk>/', v.project_detail, name='project_detail'),
+    path('projects/<int:pk>/edit/', v.project_edit, name='project_edit'),
+    path('projects/<int:pk>/delete/', v.project_delete, name='project_delete'),
     
-    path('pharmacy/records/submit/', core_views.pharmacy_record_submit, name='pharmacy_record_submit'),
-    path('pharmacy/records/', core_views.pharmacy_record_list, name='pharmacy_record_list'),
+    # 跟进管理
+    path('followups/', v.followup_list, name='followup_list'),
+    path('followups/create/', v.followup_create, name='followup_create'),
+    path('followups/<int:pk>/edit/', v.followup_edit, name='followup_edit'),
+    path('followups/<int:pk>/delete/', v.followup_delete, name='followup_delete'),
     
-    path('company/records/submit/', core_views.company_record_submit, name='company_record_submit'),
-    path('company/records/', core_views.company_record_list, name='company_record_list'),
+    # 出差管理
+    path('trips/', v.trip_list, name='trip_list'),
+    path('trips/create/', v.trip_create, name='trip_create'),
+    path('trips/<int:pk>/approve/', v.trip_approve, name='trip_approve'),
     
-    path('district/records/review/', core_views.district_record_review, name='district_record_review'),
+    # 业务费管理
+    path('expenses/', v.expense_list, name='expense_list'),
+    path('expenses/create/', v.expense_create, name='expense_create'),
+    path('expenses/<int:pk>/approve/', v.expense_approve, name='expense_approve'),
+    
+    # 药品差比价管理
+    path('drugs/', v.drug_list, name='drug_list'),
+    path('drugs/import/', v.drug_import, name='drug_import'),
+    path('drugs/calculate/', v.drug_calculate, name='drug_calculate'),
+    path('pharmacies/', v.pharmacy_list, name='pharmacy_list'),
+    path('pharmacies/import/', v.pharmacy_import, name='pharmacy_import'),
+    path('companies/', v.company_list, name='company_list'),
+    path('companies/import/', v.company_import, name='company_import'),
 ]

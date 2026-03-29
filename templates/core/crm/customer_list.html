@@ -1,0 +1,79 @@
+{% extends 'core/base.html' %}
+{% block title %}客户管理{% endblock %}
+
+{% block content %}
+<h2>客户管理</h2>
+<a href="{% url 'customer_create' %}" class="btn btn-primary mb-3">新增客户</a>
+
+<form method="get" class="row g-3 mb-3">
+    <div class="col-md-3">
+        <input type="text" name="name" class="form-control" placeholder="客户名称" value="{{ request.GET.name|default:'' }}">
+    </div>
+    <div class="col-md-2">
+        <select name="status" class="form-select">
+            <option value="">全部状态</option>
+            <option value="潜在" {% if request.GET.status == '潜在' %}selected{% endif %}>潜在</option>
+            <option value="跟进中" {% if request.GET.status == '跟进中' %}selected{% endif %}>跟进中</option>
+            <option value="商机" {% if request.GET.status == '商机' %}selected{% endif %}>商机</option>
+            <option value="成交" {% if request.GET.status == '成交' %}selected{% endif %}>成交</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <select name="source" class="form-select">
+            <option value="">全部来源</option>
+            <option value="推荐" {% if request.GET.source == '推荐' %}selected{% endif %}>推荐</option>
+            <option value="电话营销" {% if request.GET.source == '电话营销' %}selected{% endif %}>电话营销</option>
+            <option value="展会" {% if request.GET.source == '展会' %}selected{% endif %}>展会</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <button type="submit" class="btn btn-primary">查询</button>
+    </div>
+</form>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>客户编码</th>
+            <th>客户名称</th>
+            <th>行业</th>
+            <th>级别</th>
+            <th>状态</th>
+            <th>来源</th>
+            <th>负责人</th>
+            <th>操作</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for customer in page_obj %}
+        <tr>
+            <td>{{ customer.code }}</td>
+            <td><a href="{% url 'customer_detail' customer.id %}">{{ customer.name }}</a></td>
+            <td>{{ customer.industry|default:'-' }}</td>
+            <td>{{ customer.level|default:'-' }}</td>
+            <td>{{ customer.get_status_display }}</td>
+            <td>{{ customer.get_source_display|default:'-' }}</td>
+            <td>{{ customer.owner.username|default:'-' }}</td>
+            <td>
+                <a href="{% url 'customer_edit' customer.id %}" class="btn btn-sm btn-info">编辑</a>
+                <a href="{% url 'customer_delete' customer.id %}" class="btn btn-sm btn-danger" onclick="return confirm('确定删除?')">删除</a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="text-center">暂无数据</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<nav>
+    <ul class="pagination">
+        {% if page_obj.has_previous %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">上一页</a></li>
+        {% endif %}
+        <li class="page-item active"><span class="page-link">第 {{ page_obj.number }} / {{ page_obj.paginator.num_pages }} 页</span></li>
+        {% if page_obj.has_next %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">下一页</a></li>
+        {% endif %}
+    </ul>
+</nav>
+{% endblock %}

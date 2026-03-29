@@ -1,0 +1,49 @@
+{% extends 'core/base.html' %}
+{% block title %}{% if contact %}编辑{% else %}新增{% endif %}联系人{% endblock %}
+
+{% block content %}
+<h2>{% if contact %}编辑{% else %}新增{% endif %}联系人</h2>
+<form method="post" class="col-md-6">
+    {% csrf_token %}
+    <div class="mb-3">
+        <label class="form-label">客户 *</label>
+        <select name="customer" class="form-select" required>
+            {% for c in customers %}
+            <option value="{{ c.id }}" {% if contact.customer_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">姓名 *</label>
+        <input type="text" name="name" class="form-control" value="{{ contact.name|default:'' }}" required>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">职位</label>
+        <input type="text" name="position" class="form-control" value="{{ contact.position|default:'' }}">
+    </div>
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label class="form-label">电话</label>
+            <input type="text" name="phone" class="form-control" value="{{ contact.phone|default:'' }}">
+        </div>
+        <div class="col-md-6 mb-3">
+            <label class="form-label">手机</label>
+            <input type="text" name="mobile" class="form-control" value="{{ contact.mobile|default:'' }}">
+        </div>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">邮箱</label>
+        <input type="email" name="email" class="form-control" value="{{ contact.email|default:'' }}">
+    </div>
+    <div class="mb-3 form-check">
+        <input type="checkbox" name="is_primary" class="form-check-input" id="isPrimary" {% if contact.is_primary %}checked{% endif %}>
+        <label class="form-check-label" for="isPrimary">主要联系人</label>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">备注</label>
+        <textarea name="description" class="form-control" rows="2">{{ contact.description|default:'' }}</textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">保存</button>
+    <a href="{% url 'contact_list' %}" class="btn btn-secondary">返回</a>
+</form>
+{% endblock %}

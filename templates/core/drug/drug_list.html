@@ -1,0 +1,55 @@
+{% extends 'core/base.html' %}
+{% block title %}药品管理{% endblock %}
+
+{% block content %}
+<h2>药品列表</h2>
+<a href="{% url 'drug_import' %}" class="btn btn-primary mb-3">导入药品</a>
+<a href="{% url 'drug_calculate' %}" class="btn btn-success mb-3">计算差比价</a>
+
+<form method="get" class="row g-3 mb-3">
+    <div class="col-md-4">
+        <input type="text" name="code" class="form-control" placeholder="统编代码" value="{{ request.GET.code|default:'' }}">
+    </div>
+    <div class="col-md-4">
+        <input type="text" name="generic_name" class="form-control" placeholder="通用名" value="{{ request.GET.generic_name|default:'' }}">
+    </div>
+    <div class="col-md-4">
+        <button type="submit" class="btn btn-primary">查询</button>
+    </div>
+</form>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>统编代码</th>
+            <th>通用名</th>
+            <th>药品分类</th>
+            <th>目录剂型</th>
+            <th>规格包装</th>
+            <th>挂网价</th>
+            <th>锚点价格</th>
+            <th>差比价</th>
+            <th>价差对比</th>
+            <th>标准品</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for drug in page_obj %}
+        <tr style="{% if drug.price_diff > 0 %}background-color: #fff3cd;{% endif %}">
+            <td>{{ drug.code }}</td>
+            <td>{{ drug.generic_name }}</td>
+            <td>{{ drug.drug_category }}</td>
+            <td>{{ drug.catalog_dosage_form|default:'-' }}</td>
+            <td>{{ drug.spec_package|default:'-' }}</td>
+            <td>{{ drug.network_price }}</td>
+            <td>{{ drug.anchor_price|default:'-' }}</td>
+            <td>{{ drug.standard_price|default:'-' }}</td>
+            <td style="{% if drug.price_diff > 0 %}color: red; font-weight: bold;{% endif %}">{{ drug.price_diff|default:'-' }}</td>
+            <td>{{ drug.is_standard|yesno:'是,否' }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="10" class="text-center">暂无数据</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

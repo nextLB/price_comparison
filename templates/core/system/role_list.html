@@ -1,0 +1,35 @@
+{% extends 'core/base.html' %}
+{% block title %}角色管理{% endblock %}
+
+{% block content %}
+<h2>角色管理</h2>
+<a href="{% url 'role_create' %}" class="btn btn-primary mb-3">新增角色</a>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>角色名称</th>
+            <th>角色编码</th>
+            <th>描述</th>
+            <th>创建时间</th>
+            <th>操作</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for role in page_obj %}
+        <tr>
+            <td>{{ role.name }}</td>
+            <td>{{ role.code }}</td>
+            <td>{{ role.description|default:'-' }}</td>
+            <td>{{ role.created_at|date:"Y-m-d" }}</td>
+            <td>
+                <a href="#" class="btn btn-sm btn-info">编辑</a>
+                <a href="#" class="btn btn-sm btn-danger">删除</a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="text-center">暂无数据</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

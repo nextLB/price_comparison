@@ -1,0 +1,47 @@
+{% extends 'core/base.html' %}
+{% block title %}业务费管理{% endblock %}
+
+{% block content %}
+<h2>业务费管理</h2>
+<a href="{% url 'expense_create' %}" class="btn btn-primary mb-3">申请费用</a>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>申请人</th>
+            <th>项目</th>
+            <th>费用类型</th>
+            <th>金额</th>
+            <th>费用日期</th>
+            <th>说明</th>
+            <th>状态</th>
+            <th>操作</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for e in page_obj %}
+        <tr>
+            <td>{{ e.user.username }}</td>
+            <td>{{ e.project.name|default:'-' }}</td>
+            <td>{{ e.get_expense_type_display }}</td>
+            <td>{{ e.amount }}</td>
+            <td>{{ e.expense_date }}</td>
+            <td>{{ e.description|truncatechars:20 }}</td>
+            <td>{{ e.get_status_display }}</td>
+            <td>
+                {% if e.status == '已提交' %}
+                <form method="post" style="display:inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="expense_id" value="{{ e.id }}">
+                    <button type="submit" name="action" value="approve" class="btn btn-sm btn-success">通过</button>
+                    <button type="submit" name="action" value="reject" class="btn btn-sm btn-danger">拒绝</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="text-center">暂无数据</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

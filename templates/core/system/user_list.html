@@ -1,0 +1,37 @@
+{% extends 'core/base.html' %}
+{% block title %}用户管理{% endblock %}
+
+{% block content %}
+<h2>用户管理</h2>
+<a href="{% url 'user_create' %}" class="btn btn-primary mb-3">新增用户</a>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>用户名</th>
+            <th>邮箱</th>
+            <th>用户类型</th>
+            <th>部门</th>
+            <th>电话</th>
+            <th>操作</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for user in page_obj %}
+        <tr>
+            <td>{{ user.username }}</td>
+            <td>{{ user.email|default:'-' }}</td>
+            <td>{{ user.get_user_type_display }}</td>
+            <td>{{ user.department.name|default:'-' }}</td>
+            <td>{{ user.phone|default:'-' }}</td>
+            <td>
+                <a href="#" class="btn btn-sm btn-info">编辑</a>
+                <a href="#" class="btn btn-sm btn-danger">删除</a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="text-center">暂无数据</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

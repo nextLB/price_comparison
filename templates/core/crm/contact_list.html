@@ -1,0 +1,41 @@
+{% extends 'core/base.html' %}
+{% block title %}联系人管理{% endblock %}
+
+{% block content %}
+<h2>联系人管理</h2>
+<a href="{% url 'contact_create' %}" class="btn btn-primary mb-3">新增联系人</a>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>姓名</th>
+            <th>客户</th>
+            <th>职位</th>
+            <th>电话</th>
+            <th>手机</th>
+            <th>邮箱</th>
+            <th>主要联系人</th>
+            <th>操作</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for contact in page_obj %}
+        <tr>
+            <td>{{ contact.name }}</td>
+            <td>{{ contact.customer.name }}</td>
+            <td>{{ contact.position|default:'-' }}</td>
+            <td>{{ contact.phone|default:'-' }}</td>
+            <td>{{ contact.mobile|default:'-' }}</td>
+            <td>{{ contact.email|default:'-' }}</td>
+            <td>{{ contact.is_primary|yesno:'是,否' }}</td>
+            <td>
+                <a href="{% url 'contact_edit' contact.id %}" class="btn btn-sm btn-info">编辑</a>
+                <a href="{% url 'contact_delete' contact.id %}" class="btn btn-sm btn-danger" onclick="return confirm('确定删除?')">删除</a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="text-center">暂无数据</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

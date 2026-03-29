@@ -1,0 +1,35 @@
+{% extends 'core/base.html' %}
+{% block title %}部门管理{% endblock %}
+
+{% block content %}
+<h2>部门管理</h2>
+<a href="{% url 'department_create' %}" class="btn btn-primary mb-3">新增部门</a>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>部门名称</th>
+            <th>部门编码</th>
+            <th>上级部门</th>
+            <th>负责人</th>
+            <th>操作</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for dept in page_obj %}
+        <tr>
+            <td>{{ dept.name }}</td>
+            <td>{{ dept.code }}</td>
+            <td>{{ dept.parent.name|default:'-' }}</td>
+            <td>{{ dept.manager.username|default:'-' }}</td>
+            <td>
+                <a href="#" class="btn btn-sm btn-info">编辑</a>
+                <a href="#" class="btn btn-sm btn-danger">删除</a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="text-center">暂无数据</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

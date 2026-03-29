@@ -1,0 +1,60 @@
+{% extends 'core/base.html' %}
+{% block title %}{% if project %}编辑{% else %}新增{% endif %}项目{% endblock %}
+
+{% block content %}
+<h2>{% if project %}编辑{% else %}新增{% endif %}项目</h2>
+<form method="post" class="col-md-8">
+    {% csrf_token %}
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label class="form-label">项目名称 *</label>
+            <input type="text" name="name" class="form-control" value="{{ project.name|default:'' }}" required>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label class="form-label">项目编码 *</label>
+            <input type="text" name="code" class="form-control" value="{{ project.code|default:'' }}" required>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label class="form-label">客户</label>
+            <select name="customer" class="form-select">
+                <option value="">请选择</option>
+                {% for c in customers %}
+                <option value="{{ c.id }}" {% if project.customer_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label class="form-label">预算</label>
+            <input type="number" name="budget" class="form-control" value="{{ project.budget|default:'0' }}">
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label class="form-label">状态</label>
+            <select name="status" class="form-select">
+                <option value="草稿" {% if project.status == '草稿' %}selected{% endif %}>草稿</option>
+                <option value="已提交" {% if project.status == '已提交' %}selected{% endif %}>已提交</option>
+                <option value="已立项" {% if project.status == '已立项' %}selected{% endif %}>已立项</option>
+                <option value="进行中" {% if project.status == '进行中' %}selected{% endif %}>进行中</option>
+                <option value="已完成" {% if project.status == '已完成' %}selected{% endif %}>已完成</option>
+            </select>
+        </div>
+        <div class="col-md-3 mb-3">
+            <label class="form-label">开始日期</label>
+            <input type="date" name="start_date" class="form-control" value="{{ project.start_date|default:'' }}">
+        </div>
+        <div class="col-md-3 mb-3">
+            <label class="form-label">结束日期</label>
+            <input type="date" name="end_date" class="form-control" value="{{ project.end_date|default:'' }}">
+        </div>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">项目描述</label>
+        <textarea name="description" class="form-control" rows="4">{{ project.description|default:'' }}</textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">保存</button>
+    <a href="{% url 'project_list' %}" class="btn btn-secondary">返回</a>
+</form>
+{% endblock %}
