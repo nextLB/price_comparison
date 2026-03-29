@@ -1,0 +1,76 @@
+{% extends 'core/base.html' %}
+
+{% block title %}药店列表{% endblock %}
+
+{% block nav_items %}
+<li class="nav-item"><a class="nav-link" href="{% url 'drug_list' %}">药品查询</a></li>
+<li class="nav-item"><a class="nav-link" href="{% url 'pharmacy_list' %}">药店管理</a></li>
+<li class="nav-item"><a class="nav-link" href="{% url 'company_list' %}">药企管理</a></li>
+{% endblock %}
+
+{% block sidebar %}
+<div class="p-3"><h5>导航菜单</h5></div>
+<a href="{% url 'drug_list' %}">药品查询</a>
+<a href="{% url 'import_drugs' %}">导入药品</a>
+<a href="{% url 'import_anchor_price' %}">导入锚点价格</a>
+<a href="{% url 'calculate_ratio' %}">计算差比价</a>
+<a href="{% url 'pharmacy_list' %}">药店列表</a>
+<a href="{% url 'pharmacy_import' %}">导入药店</a>
+<a href="{% url 'company_list' %}">药企列表</a>
+<a href="{% url 'company_import' %}">导入药企</a>
+<a href="{% url 'pharmacy_record_review' %}">药店备案审核</a>
+{% endblock %}
+
+{% block content %}
+<h2>药店列表</h2>
+<form method="get" class="row g-3 mb-3">
+    <div class="col-md-3">
+        <input type="text" name="code" class="form-control" placeholder="药店编码" value="{{ request.GET.code|default:'' }}">
+    </div>
+    <div class="col-md-3">
+        <input type="text" name="name" class="form-control" placeholder="药店名称" value="{{ request.GET.name|default:'' }}">
+    </div>
+    <div class="col-md-3">
+        <input type="text" name="district" class="form-control" placeholder="区县" value="{{ request.GET.district|default:'' }}">
+    </div>
+    <div class="col-md-3">
+        <button type="submit" class="btn btn-primary">查询</button>
+        <a href="{% url 'pharmacy_list' %}" class="btn btn-secondary">重置</a>
+    </div>
+</form>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>药店编码</th>
+            <th>药店名称</th>
+            <th>医保编码</th>
+            <th>注册区县</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for pharmacy in page_obj %}
+        <tr>
+            <td>{{ pharmacy.pharmacy_code }}</td>
+            <td>{{ pharmacy.pharmacy_name }}</td>
+            <td>{{ pharmacy.medical_insurance_code }}</td>
+            <td>{{ pharmacy.district }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4" class="text-center">暂无数据</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<nav>
+    <ul class="pagination">
+        {% if page_obj.has_previous %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">上一页</a></li>
+        {% endif %}
+        <li class="page-item active"><span class="page-link">第 {{ page_obj.number }} / {{ page_obj.paginator.num_pages }} 页</span></li>
+        {% if page_obj.has_next %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">下一页</a></li>
+        {% endif %}
+    </ul>
+</nav>
+{% endblock %}

@@ -1,0 +1,135 @@
+{% extends 'core/base.html' %}
+
+{% block title %}控制台 - 医保药品价格检测系统{% endblock %}
+
+{% block nav_items %}
+{% if user.user_type == 'yaoshisuo' %}
+<li class="nav-item"><a class="nav-link" href="{% url 'drug_list' %}">药品查询</a></li>
+<li class="nav-item"><a class="nav-link" href="{% url 'pharmacy_list' %}">药店管理</a></li>
+<li class="nav-item"><a class="nav-link" href="{% url 'company_list' %}">药企管理</a></li>
+{% elif user.user_type == 'yaodian' %}
+<li class="nav-item"><a class="nav-link" href="{% url 'pharmacy_record_submit' %}">备案价提交</a></li>
+<li class="nav-item"><a class="nav-link" href="{% url 'pharmacy_record_list' %}">备案价查询</a></li>
+{% elif user.user_type == 'yaoqi' %}
+<li class="nav-item"><a class="nav-link" href="{% url 'company_record_submit' %}">挂网价申报</a></li>
+<li class="nav-item"><a class="nav-link" href="{% url 'company_record_list' %}">挂网价查询</a></li>
+{% elif user.user_type == 'quxian' %}
+<li class="nav-item"><a class="nav-link" href="{% url 'district_record_review' %}">备案价审核</a></li>
+{% endif %}
+{% endblock %}
+
+{% block sidebar %}
+<div class="p-3">
+    <h5>导航菜单</h5>
+</div>
+{% if user.user_type == 'yaoshisuo' %}
+<a href="{% url 'drug_list' %}">药品查询</a>
+<a href="{% url 'import_drugs' %}">导入药品</a>
+<a href="{% url 'import_anchor_price' %}">导入锚点价格</a>
+<a href="{% url 'calculate_ratio' %}">计算差比价</a>
+<a href="{% url 'pharmacy_list' %}">药店列表</a>
+<a href="{% url 'pharmacy_import' %}">导入药店</a>
+<a href="{% url 'company_list' %}">药企列表</a>
+<a href="{% url 'company_import' %}">导入药企</a>
+<a href="{% url 'pharmacy_record_review' %}">药店备案审核</a>
+{% elif user.user_type == 'yaodian' %}
+<a href="{% url 'pharmacy_record_submit' %}">备案价提交</a>
+<a href="{% url 'pharmacy_record_list' %}">备案价查询</a>
+{% elif user.user_type == 'yaoqi' %}
+<a href="{% url 'company_record_submit' %}">挂网价申报</a>
+<a href="{% url 'company_record_list' %}">挂网价查询</a>
+{% elif user.user_type == 'quxian' %}
+<a href="{% url 'district_record_review' %}">备案价审核</a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<h2>控制台</h2>
+<div class="row mt-4">
+    {% if user.user_type == 'yaoshisuo' %}
+    <div class="col-md-3">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <h5 class="card-title">药品总数</h5>
+                <h2>{{ drug_count|default:0 }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h5 class="card-title">药店数量</h5>
+                <h2>{{ pharmacy_count|default:0 }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <h5 class="card-title">药企数量</h5>
+                <h2>{{ company_count|default:0 }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-danger">
+            <div class="card-body">
+                <h5 class="card-title">异常药品</h5>
+                <h2>{{ abnormal_count|default:0 }}</h2>
+            </div>
+        </div>
+    </div>
+    {% elif user.user_type == 'yaodian' %}
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">我的药店</h5>
+                <p>{{ pharmacy.pharmacy_name|default:"未关联" }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">备案记录</h5>
+                <h2>{{ record_count|default:0 }}</h2>
+            </div>
+        </div>
+    </div>
+    {% elif user.user_type == 'yaoqi' %}
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">我的企业</h5>
+                <p>{{ company.company_name|default:"未关联" }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">申报记录</h5>
+                <h2>{{ record_count|default:0 }}</h2>
+            </div>
+        </div>
+    </div>
+    {% elif user.user_type == 'quxian' %}
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">所属区县</h5>
+                <p>{{ user.district }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card text-white bg-warning">
+            <div class="card-body">
+                <h5 class="card-title">待审核</h5>
+                <h2>{{ pending_count|default:0 }}</h2>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

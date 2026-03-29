@@ -1,0 +1,54 @@
+{% extends 'core/base.html' %}
+
+{% block title %}计算差比价{% endblock %}
+
+{% block nav_items %}
+<li class="nav-item"><a class="nav-link" href="{% url 'drug_list' %}">药品查询</a></li>
+<li class="nav-item"><a class="nav-link" href="{% url 'pharmacy_list' %}">药店管理</a></li>
+<li class="nav-item"><a class="nav-link" href="{% url 'company_list' %}">药企管理</a></li>
+{% endblock %}
+
+{% block sidebar %}
+<div class="p-3"><h5>导航菜单</h5></div>
+<a href="{% url 'drug_list' %}">药品查询</a>
+<a href="{% url 'import_drugs' %}">导入药品</a>
+<a href="{% url 'import_anchor_price' %}">导入锚点价格</a>
+<a href="{% url 'calculate_ratio' %}">计算差比价</a>
+<a href="{% url 'pharmacy_list' %}">药店列表</a>
+<a href="{% url 'pharmacy_import' %}">导入药店</a>
+<a href="{% url 'company_list' %}">药企列表</a>
+<a href="{% url 'company_import' %}">导入药企</a>
+<a href="{% url 'pharmacy_record_review' %}">药店备案审核</a>
+{% endblock %}
+
+{% block content %}
+<h2>计算差比价</h2>
+<div class="card">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label">标准品选择方式</label>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="basis" value="max" id="basisMax" checked>
+                    <label class="form-check-label" for="basisMax">挂网价最高</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="basis" value="min" id="basisMin">
+                    <label class="form-check-label" for="basisMin">挂网价最低</label>
+                </div>
+            </div>
+            <div class="alert alert-info">
+                <p><strong>说明：</strong></p>
+                <ul>
+                    <li>计算时会将同医保目录名、同标化持有人的药品作为"二同药品"进行差比价计算</li>
+                    <li>如果没有同医保目录名，则使用同通用名进行计算</li>
+                    <li>系统会自动识别西药和中成药，使用不同的计算公式</li>
+                </ul>
+            </div>
+            <button type="submit" class="btn btn-primary">开始计算</button>
+            <a href="{% url 'drug_list' %}" class="btn btn-secondary">返回</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

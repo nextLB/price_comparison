@@ -1,0 +1,80 @@
+{% extends 'core/base.html' %}
+
+{% block title %}挂网价查询{% endblock %}
+
+{% block nav_items %}
+<li class="nav-item"><a class="nav-link" href="{% url 'company_record_submit' %}">挂网价申报</a></li>
+<li class="nav-item"><a class="nav-link" href="{% url 'company_record_list' %}">挂网价查询</a></li>
+{% endblock %}
+
+{% block sidebar %}
+<div class="p-3"><h5>导航菜单</h5></div>
+<a href="{% url 'company_record_submit' %}">挂网价申报</a>
+<a href="{% url 'company_record_list' %}">挂网价查询</a>
+{% endblock %}
+
+{% block content %}
+<h2>挂网价查询</h2>
+<form method="get" class="row g-3 mb-3">
+    <div class="col-md-3">
+        <input type="text" name="code" class="form-control" placeholder="统编代码" value="{{ request.GET.code|default:'' }}">
+    </div>
+    <div class="col-md-3">
+        <input type="text" name="generic_name" class="form-control" placeholder="通用名" value="{{ request.GET.generic_name|default:'' }}">
+    </div>
+    <div class="col-md-3">
+        <select name="status" class="form-select">
+            <option value="">全部状态</option>
+            <option value="已提交" {% if request.GET.status == '已提交' %}selected{% endif %}>已提交</option>
+            <option value="待审核" {% if request.GET.status == '待审核' %}selected{% endif %}>待审核</option>
+            <option value="审核通过" {% if request.GET.status == '审核通过' %}selected{% endif %}>审核通过</option>
+            <option value="审核不通过" {% if request.GET.status == '审核不通过' %}selected{% endif %}>审核不通过</option>
+        </select>
+    </div>
+    <div class="col-md-3">
+        <button type="submit" class="btn btn-primary">查询</button>
+        <a href="{% url 'company_record_list' %}" class="btn btn-secondary">重置</a>
+    </div>
+</form>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>统编代码</th>
+            <th>通用名</th>
+            <th>规格包装</th>
+            <th>申报价</th>
+            <th>挂网价</th>
+            <th>数据年月</th>
+            <th>状态</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for record in page_obj %}
+        <tr>
+            <td>{{ record.drug.code }}</td>
+            <td>{{ record.drug.generic_name }}</td>
+            <td>{{ record.drug.spec_package }}</td>
+            <td>{{ record.declared_price }}</td>
+            <td>{{ record.drug.network_price }}</td>
+            <td>{{ record.record_date }}</td>
+            <td>{{ record.get_status_display }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="text-center">暂无数据</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<nav>
+    <ul class="pagination">
+        {% if page_obj.has_previous %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">上一页</a></li>
+        {% endif %}
+        <li class="page-item active"><span class="page-link">第 {{ page_obj.number }} / {{ page_obj.paginator.num_pages }} 页</span></li>
+        {% if page_obj.has_next %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">下一页</a></li>
+        {% endif %}
+    </ul>
+</nav>
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends 'core/base.html' %}
+
+{% block title %}备案价提交{% endblock %}
+
+{% block nav_items %}
+<li class="nav-item"><a class="nav-link" href="{% url 'pharmacy_record_submit' %}">备案价提交</a></li>
+<li class="nav-item"><a class="nav-link" href="{% url 'pharmacy_record_list' %}">备案价查询</a></li>
+{% endblock %}
+
+{% block sidebar %}
+<div class="p-3"><h5>导航菜单</h5></div>
+<a href="{% url 'pharmacy_record_submit' %}">备案价提交</a>
+<a href="{% url 'pharmacy_record_list' %}">备案价查询</a>
+{% endblock %}
+
+{% block content %}
+<h2>备案价提交</h2>
+<div class="card">
+    <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label">数据年月</label>
+                <input type="date" name="record_date" class="form-control" value="{{ today }}">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">选择Excel文件</label>
+                <input type="file" name="excel_file" class="form-control" accept=".xlsx,.xls" required>
+            </div>
+            <div class="alert alert-warning">
+                <p><strong>注意事项：</strong></p>
+                <ul>
+                    <li>备案价不能高于挂网价的1.15倍</li>
+                    <li>备案价不能低于挂网价的1/1.3倍</li>
+                </ul>
+            </div>
+            <div class="alert alert-info">
+                <p><strong>Excel文件需包含以下列：</strong></p>
+                <ul>
+                    <li>统编代码（必填）</li>
+                    <li>备案价（必填）</li>
+                </ul>
+            </div>
+            <button type="submit" class="btn btn-primary">提交</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

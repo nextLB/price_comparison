@@ -1,0 +1,76 @@
+{% extends 'core/base.html' %}
+
+{% block title %}药店备案审核{% endblock %}
+
+{% block nav_items %}
+<li class="nav-item"><a class="nav-link" href="{% url 'drug_list' %}">药品查询</a></li>
+<li class="nav-item"><a class="nav-link" href="{% url 'pharmacy_list' %}">药店管理</a></li>
+<li class="nav-item"><a class="nav-link" href="{% url 'company_list' %}">药企管理</a></li>
+{% endblock %}
+
+{% block sidebar %}
+<div class="p-3"><h5>导航菜单</h5></div>
+<a href="{% url 'drug_list' %}">药品查询</a>
+<a href="{% url 'import_drugs' %}">导入药品</a>
+<a href="{% url 'import_anchor_price' %}">导入锚点价格</a>
+<a href="{% url 'calculate_ratio' %}">计算差比价</a>
+<a href="{% url 'pharmacy_list' %}">药店列表</a>
+<a href="{% url 'pharmacy_import' %}">导入药店</a>
+<a href="{% url 'company_list' %}">药企列表</a>
+<a href="{% url 'company_import' %}">导入药企</a>
+<a href="{% url 'pharmacy_record_review' %}">药店备案审核</a>
+{% endblock %}
+
+{% block content %}
+<h2>药店备案审核</h2>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>药店名称</th>
+            <th>统编代码</th>
+            <th>通用名</th>
+            <th>备案价</th>
+            <th>挂网价</th>
+            <th>数据年月</th>
+            <th>状态</th>
+            <th>操作</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for record in page_obj %}
+        <tr>
+            <td>{{ record.pharmacy.pharmacy_name }}</td>
+            <td>{{ record.drug.code }}</td>
+            <td>{{ record.drug.generic_name }}</td>
+            <td>{{ record.record_price }}</td>
+            <td>{{ record.drug.network_price }}</td>
+            <td>{{ record.record_date }}</td>
+            <td>{{ record.get_status_display }}</td>
+            <td>
+                <form method="post" style="display:inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="record_id" value="{{ record.id }}">
+                    <button type="submit" name="action" value="approve" class="btn btn-sm btn-success">通过</button>
+                    <button type="submit" name="action" value="reject" class="btn btn-sm btn-danger">驳回</button>
+                </form>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="text-center">暂无待审核数据</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<nav>
+    <ul class="pagination">
+        {% if page_obj.has_previous %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">上一页</a></li>
+        {% endif %}
+        <li class="page-item active"><span class="page-link">第 {{ page_obj.number }} / {{ page_obj.paginator.num_pages }} 页</span></li>
+        {% if page_obj.has_next %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">下一页</a></li>
+        {% endif %}
+    </ul>
+</nav>
+{% endblock %}
