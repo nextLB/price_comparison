@@ -1,11 +1,12 @@
 {% extends 'core/base.html' %}
 
-{% block title %}控制台 - 客户跟进管理系统{% endblock %}
+{% block title %}控制台 - 医保药品价格检测系统{% endblock %}
 
 {% block sidebar %}
 <div class="p-3"><h5>系统菜单</h5></div>
 <a href="{% url 'dashboard' %}">控制台</a>
 
+{% if user.user_type == 'admin' %}
 <h6 class="mt-3 px-3 text-muted">系统管理</h6>
 <a href="{% url 'user_list' %}">用户管理</a>
 <a href="{% url 'role_list' %}">角色管理</a>
@@ -25,11 +26,58 @@
 <a href="{% url 'drug_list' %}">药品管理</a>
 <a href="{% url 'pharmacy_list' %}">药店管理</a>
 <a href="{% url 'company_list' %}">药企管理</a>
+
+{% elif user.user_type == 'supervisor' %}
+<h6 class="mt-3 px-3 text-muted">药品管理</h6>
+<a href="{% url 'supervisor_drug_list' %}">药品挂网价查询</a>
+<a href="{% url 'supervisor_anchor_price_list' %}">锚点价格管理</a>
+<a href="{% url 'calculate_ratio' %}">差比价计算</a>
+
+<h6 class="mt-3 px-3 text-muted">药店管理</h6>
+<a href="{% url 'supervisor_pharmacy_list' %}">药店列表</a>
+<a href="{% url 'supervisor_pharmacy_import' %}">导入药店</a>
+
+<h6 class="mt-3 px-3 text-muted">企业管理</h6>
+<a href="{% url 'supervisor_company_list' %}">药企列表</a>
+<a href="{% url 'supervisor_company_import' %}">导入药企</a>
+
+{% elif user.user_type == 'drug_section' %}
+<h6 class="mt-3 px-3 text-muted">药品管理</h6>
+<a href="{% url 'drug_section_drug_list' %}">药品挂网价查询</a>
+
+<h6 class="mt-3 px-3 text-muted">价格审核</h6>
+<a href="{% url 'drug_section_review_list' %}">挂网价审核</a>
+
+<h6 class="mt-3 px-3 text-muted">企业管理</h6>
+<a href="{% url 'drug_section_company_list' %}">药企列表</a>
+<a href="{% url 'drug_section_company_import' %}">导入药企</a>
+
+{% elif user.user_type == 'pharmacy' %}
+<h6 class="mt-3 px-3 text-muted">药品查询</h6>
+<a href="{% url 'pharmacy_drug_list' %}">药品挂网价查询</a>
+
+<h6 class="mt-3 px-3 text-muted">备案价管理</h6>
+<a href="{% url 'pharmacy_record_submit' %}">提交备案价</a>
+<a href="{% url 'pharmacy_record_list' %}">备案价查询</a>
+
+{% elif user.user_type == 'company' %}
+<h6 class="mt-3 px-3 text-muted">药品查询</h6>
+<a href="{% url 'company_drug_list' %}">药品挂网价查询</a>
+
+<h6 class="mt-3 px-3 text-muted">价格申报</h6>
+<a href="{% url 'company_record_submit' %}">挂网价申报</a>
+<a href="{% url 'company_record_list' %}">申报记录查询</a>
+
+{% elif user.user_type == 'district' %}
+<h6 class="mt-3 px-3 text-muted">药店备案价审核</h6>
+<a href="{% url 'district_pharmacy_record_list' %}">备案价审核</a>
+{% endif %}
 {% endblock %}
 
 {% block content %}
 <h2>控制台</h2>
 <div class="row mt-4">
+    {% if user.user_type == 'admin' %}
     <div class="col-md-3">
         <div class="card text-white bg-primary">
             <div class="card-body">
@@ -62,22 +110,12 @@
             </div>
         </div>
     </div>
-</div>
-
-<div class="row mt-4">
+    {% else %}
     <div class="col-md-12">
-        <div class="card">
-            <div class="card-header">系统说明</div>
-            <div class="card-body">
-                <p>欢迎使用客户跟进管理系统！</p>
-                <ul>
-                    <li><strong>系统管理：</strong>用户管理、角色管理、组织架构管理</li>
-                    <li><strong>客户管理：</strong>客户信息管理、联系人管理</li>
-                    <li><strong>业务管理：</strong>项目管理、跟进记录、出差申请、业务费用报销</li>
-                    <li><strong>药品监测：</strong>药品差比价计算、药店管理、药企管理</li>
-                </ul>
-            </div>
+        <div class="alert alert-info">
+            欢迎使用医保药品价格检测系统！您的用户类型：<strong>{{ user.get_user_type_display }}</strong>
         </div>
     </div>
+    {% endif %}
 </div>
 {% endblock %}

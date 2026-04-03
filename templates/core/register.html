@@ -40,20 +40,22 @@
             </div>
             <div class="mb-3">
                 <label class="form-label">用户类型</label>
-                <select name="user_type" class="form-select" required>
+                <select name="user_type" class="form-select" required onchange="toggleOrgField()">
                     <option value="">请选择用户类型</option>
-                    <option value="yaodian">药店</option>
-                    <option value="yaoqi">药企</option>
-                    <option value="quxian">区县医保局</option>
+                    <option value="supervisor">药事所监督科</option>
+                    <option value="drug_section">药事所药品科</option>
+                    <option value="pharmacy">药店</option>
+                    <option value="company">药企</option>
+                    <option value="district">区县医保局</option>
                 </select>
+            </div>
+            <div class="mb-3" id="orgField" style="display:none;">
+                <label class="form-label">所属机构</label>
+                <input type="text" name="organization" class="form-control" placeholder="如：浦东新区、黄浦区">
             </div>
             <div class="mb-3">
                 <label class="form-label">联系电话</label>
                 <input type="text" name="phone" class="form-control">
-            </div>
-            <div class="mb-3">
-                <label class="form-label">所属区县（区县医保局必填）</label>
-                <input type="text" name="district" class="form-control">
             </div>
             <button type="submit" class="btn btn-primary w-100 mb-3">注册</button>
             <div class="text-center">
@@ -61,5 +63,16 @@
             </div>
         </form>
     </div>
+    <script>
+        function toggleOrgField() {
+            var userType = document.querySelector('select[name="user_type"]').value;
+            var orgField = document.getElementById('orgField');
+            if (userType === 'district' || userType === 'pharmacy' || userType === 'company') {
+                orgField.style.display = 'block';
+            } else {
+                orgField.style.display = 'none';
+            }
+        }
+    </script>
 </body>
 </html>

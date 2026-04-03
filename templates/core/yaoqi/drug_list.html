@@ -4,13 +4,9 @@
 
 {% block sidebar %}
 <div class="p-3"><h5>导航菜单</h5></div>
-<a href="{% url 'supervisor_drug_list' %}">药品挂网价查询</a>
-<a href="{% url 'supervisor_anchor_price_list' %}">锚点价格管理</a>
-<a href="{% url 'calculate_ratio' %}">差比价计算</a>
-<a href="{% url 'supervisor_pharmacy_list' %}">药店列表</a>
-<a href="{% url 'supervisor_pharmacy_import' %}">导入药店</a>
-<a href="{% url 'supervisor_company_list' %}">药企列表</a>
-<a href="{% url 'supervisor_company_import' %}">导入药企</a>
+<a href="{% url 'company_drug_list' %}">药品挂网价查询</a>
+<a href="{% url 'company_record_submit' %}">挂网价申报</a>
+<a href="{% url 'company_record_list' %}">申报记录查询</a>
 {% endblock %}
 
 {% block content %}
@@ -24,7 +20,7 @@
     </div>
     <div class="col-md-4">
         <button type="submit" class="btn btn-primary">查询</button>
-        <a href="{% url 'supervisor_drug_list' %}" class="btn btn-secondary">重置</a>
+        <a href="{% url 'company_drug_list' %}" class="btn btn-secondary">重置</a>
     </div>
 </form>
 
@@ -37,30 +33,20 @@
             <th>目录剂型</th>
             <th>规格包装</th>
             <th>挂网价</th>
-            <th>锚点价格</th>
-            <th>差比价</th>
-            <th>价差对比</th>
-            <th>标准品</th>
         </tr>
     </thead>
     <tbody>
         {% for drug in page_obj %}
-        <tr style="{% if drug.price_diff > 0 %}background-color: #fff3cd;{% endif %}">
+        <tr>
             <td>{{ drug.code }}</td>
             <td>{{ drug.generic_name }}</td>
             <td>{{ drug.drug_category }}</td>
             <td>{{ drug.catalog_dosage_form }}</td>
             <td>{{ drug.spec_package }}</td>
             <td>{{ drug.network_price }}</td>
-            <td>{{ drug.anchor_price }}</td>
-            <td>{{ drug.standard_price|default:'-' }}</td>
-            <td style="{% if drug.price_diff > 0 %}color: red; font-weight: bold;{% endif %}">
-                {{ drug.price_diff|default:'-' }}
-            </td>
-            <td>{{ drug.is_standard|yesno:'是,否' }}</td>
         </tr>
         {% empty %}
-        <tr><td colspan="10" class="text-center">暂无数据</td></tr>
+        <tr><td colspan="6" class="text-center">暂无数据</td></tr>
         {% endfor %}
     </tbody>
 </table>
@@ -68,13 +54,11 @@
 <nav>
     <ul class="pagination">
         {% if page_obj.has_previous %}
-        <li class="page-item"><a class="page-link" href="?page=1">首页</a></li>
         <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">上一页</a></li>
         {% endif %}
         <li class="page-item active"><span class="page-link">第 {{ page_obj.number }} / {{ page_obj.paginator.num_pages }} 页</span></li>
         {% if page_obj.has_next %}
         <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">下一页</a></li>
-        <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">末页</a></li>
         {% endif %}
     </ul>
 </nav>

@@ -1,0 +1,39 @@
+{% extends 'core/base.html' %}
+
+{% block title %}编辑锚点价格{% endblock %}
+
+{% block sidebar %}
+<div class="p-3"><h5>导航菜单</h5></div>
+<a href="{% url 'supervisor_drug_list' %}">药品挂网价查询</a>
+<a href="{% url 'supervisor_anchor_price_list' %}">锚点价格管理</a>
+<a href="{% url 'calculate_ratio' %}">差比价计算</a>
+<a href="{% url 'supervisor_pharmacy_list' %}">药店列表</a>
+<a href="{% url 'supervisor_pharmacy_import' %}">导入药店</a>
+<a href="{% url 'supervisor_company_list' %}">药企列表</a>
+<a href="{% url 'supervisor_company_import' %}">导入药企</a>
+{% endblock %}
+
+{% block content %}
+<h2>编辑锚点价格</h2>
+<div class="card">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label">药品</label>
+                <input type="text" class="form-control" value="{{ anchor.drug.generic_name }} ({{ anchor.drug.code }})" readonly>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">锚点价格</label>
+                <input type="number" name="anchor_price" step="0.01" class="form-control" value="{{ anchor.anchor_price }}" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">调整倍率</label>
+                <input type="number" name="adjust_ratio" step="0.01" class="form-control" value="{{ anchor.adjust_ratio }}" required>
+            </div>
+            <button type="submit" class="btn btn-primary">保存</button>
+            <a href="{% url 'supervisor_anchor_price_list' %}" class="btn btn-secondary">返回</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -2,20 +2,34 @@
 
 {% block title %}备案价审核{% endblock %}
 
-{% block nav_items %}
-<li class="nav-item"><a class="nav-link" href="{% url 'district_record_review' %}">备案价审核</a></li>
-{% endblock %}
-
 {% block sidebar %}
 <div class="p-3"><h5>导航菜单</h5></div>
-<a href="{% url 'district_record_review' %}">备案价审核</a>
+<a href="{% url 'district_pharmacy_record_list' %}">备案价审核</a>
 {% endblock %}
 
 {% block content %}
 <h2>备案价审核</h2>
 <div class="alert alert-info">
-    当前区县：{{ user.district }}
+    当前用户：{{ user.username }} | 用户类型：{{ user.get_user_type_display }}
 </div>
+
+<form method="get" class="row g-3 mb-3">
+    <div class="col-md-3">
+        <input type="text" name="drug_code" class="form-control" placeholder="统编代码" value="{{ request.GET.drug_code|default:'' }}">
+    </div>
+    <div class="col-md-3">
+        <select name="status" class="form-select">
+            <option value="">全部状态</option>
+            <option value="已提交" {% if request.GET.status == '已提交' %}selected{% endif %}>已提交</option>
+            <option value="审核通过" {% if request.GET.status == '审核通过' %}selected{% endif %}>审核通过</option>
+            <option value="审核不通过" {% if request.GET.status == '审核不通过' %}selected{% endif %}>审核不通过</option>
+        </select>
+    </div>
+    <div class="col-md-3">
+        <button type="submit" class="btn btn-primary">查询</button>
+        <a href="{% url 'district_pharmacy_record_list' %}" class="btn btn-secondary">重置</a>
+    </div>
+</form>
 
 <table class="table table-striped">
     <thead>
@@ -54,7 +68,7 @@
             </td>
         </tr>
         {% empty %}
-        <tr><td colspan="10" class="text-center">暂无待审核数据</td></tr>
+        <tr><td colspan="10" class="text-center">暂无数据</td></tr>
         {% endfor %}
     </tbody>
 </table>

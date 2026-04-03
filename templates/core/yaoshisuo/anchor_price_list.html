@@ -1,6 +1,6 @@
 {% extends 'core/base.html' %}
 
-{% block title %}药店列表{% endblock %}
+{% block title %}锚点价格列表{% endblock %}
 
 {% block sidebar %}
 <div class="p-3"><h5>导航菜单</h5></div>
@@ -14,47 +14,47 @@
 {% endblock %}
 
 {% block content %}
-<h2>药店列表</h2>
+<h2>锚点价格管理</h2>
 <div class="mb-3">
-    <a href="{% url 'supervisor_pharmacy_import' %}" class="btn btn-primary">导入药店</a>
-    <a href="{% url 'supervisor_pharmacy_create' %}" class="btn btn-success">新增药店</a>
+    <a href="{% url 'supervisor_anchor_price_import' %}" class="btn btn-primary">导入锚点价格</a>
 </div>
 <form method="get" class="row g-3 mb-3">
-    <div class="col-md-3">
-        <input type="text" name="name" class="form-control" placeholder="药店名称" value="{{ request.GET.name|default:'' }}">
+    <div class="col-md-4">
+        <input type="text" name="drug_code" class="form-control" placeholder="统编代码" value="{{ request.GET.drug_code|default:'' }}">
     </div>
-    <div class="col-md-3">
-        <input type="text" name="district" class="form-control" placeholder="区县" value="{{ request.GET.district|default:'' }}">
-    </div>
-    <div class="col-md-3">
+    <div class="col-md-4">
         <button type="submit" class="btn btn-primary">查询</button>
-        <a href="{% url 'supervisor_pharmacy_list' %}" class="btn btn-secondary">重置</a>
+        <a href="{% url 'supervisor_anchor_price_list' %}" class="btn btn-secondary">重置</a>
     </div>
 </form>
 
 <table class="table table-striped">
     <thead>
         <tr>
-            <th>药店编码</th>
-            <th>药店名称</th>
-            <th>医保编码</th>
-            <th>注册区县</th>
+            <th>统编代码</th>
+            <th>通用名</th>
+            <th>锚点价格</th>
+            <th>调整倍率</th>
+            <th>治理价格</th>
+            <th>数据年月</th>
             <th>操作</th>
         </tr>
     </thead>
     <tbody>
-        {% for pharmacy in page_obj %}
+        {% for anchor in page_obj %}
         <tr>
-            <td>{{ pharmacy.pharmacy_code }}</td>
-            <td>{{ pharmacy.pharmacy_name }}</td>
-            <td>{{ pharmacy.medical_insurance_code }}</td>
-            <td>{{ pharmacy.district }}</td>
+            <td>{{ anchor.drug.code }}</td>
+            <td>{{ anchor.drug.generic_name }}</td>
+            <td>{{ anchor.anchor_price }}</td>
+            <td>{{ anchor.adjust_ratio }}</td>
+            <td>{{ anchor.target_price }}</td>
+            <td>{{ anchor.record_date }}</td>
             <td>
-                <a href="{% url 'supervisor_pharmacy_delete' pharmacy.pk %}" class="btn btn-sm btn-danger" onclick="return confirm('确定删除?')">删除</a>
+                <a href="{% url 'supervisor_anchor_price_edit' anchor.pk %}" class="btn btn-sm btn-warning">编辑</a>
             </td>
         </tr>
         {% empty %}
-        <tr><td colspan="5" class="text-center">暂无数据</td></tr>
+        <tr><td colspan="7" class="text-center">暂无数据</td></tr>
         {% endfor %}
     </tbody>
 </table>

@@ -2,13 +2,9 @@
 
 {% block title %}备案价查询{% endblock %}
 
-{% block nav_items %}
-<li class="nav-item"><a class="nav-link" href="{% url 'pharmacy_record_submit' %}">备案价提交</a></li>
-<li class="nav-item"><a class="nav-link" href="{% url 'pharmacy_record_list' %}">备案价查询</a></li>
-{% endblock %}
-
 {% block sidebar %}
 <div class="p-3"><h5>导航菜单</h5></div>
+<a href="{% url 'pharmacy_drug_list' %}">药品挂网价查询</a>
 <a href="{% url 'pharmacy_record_submit' %}">备案价提交</a>
 <a href="{% url 'pharmacy_record_list' %}">备案价查询</a>
 {% endblock %}
@@ -17,10 +13,7 @@
 <h2>备案价查询</h2>
 <form method="get" class="row g-3 mb-3">
     <div class="col-md-3">
-        <input type="text" name="code" class="form-control" placeholder="统编代码" value="{{ request.GET.code|default:'' }}">
-    </div>
-    <div class="col-md-3">
-        <input type="text" name="generic_name" class="form-control" placeholder="通用名" value="{{ request.GET.generic_name|default:'' }}">
+        <input type="text" name="drug_code" class="form-control" placeholder="统编代码" value="{{ request.GET.drug_code|default:'' }}">
     </div>
     <div class="col-md-3">
         <select name="status" class="form-select">

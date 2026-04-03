@@ -1,16 +1,22 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from decimal import Decimal
 
 
 class User(AbstractUser):
     USER_TYPE_CHOICES = [
         ('admin', '系统管理员'),
-        ('manager', '部门经理'),
-        ('sales', '销售人员'),
+        ('supervisor', '药事所监督科'),
+        ('drug_section', '药事所药品科'),
+        ('pharmacy', '药店'),
+        ('company', '药企'),
+        ('district', '区县医保局'),
     ]
     user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES, verbose_name='用户类型')
     phone = models.CharField(max_length=20, blank=True, verbose_name='联系电话')
     department = models.ForeignKey('Department', on_delete=models.SET_NULL, null=True, blank=True, related_name='users')
+    organization = models.CharField(max_length=200, blank=True, verbose_name='所属机构')
+    medical_insurance_code = models.CharField(max_length=50, blank=True, verbose_name='医保编码')
 
     class Meta:
         verbose_name = '用户'
@@ -361,3 +367,79 @@ class CompanyRecord(models.Model):
     class Meta:
         verbose_name = '药企申报价'
         verbose_name_plural = '药企申报价'
+
+
+class AnchorPrice(models.Model):
+    drug = models.ForeignKey(Drug, on_delete=models.CASCADE, related_name='anchor_prices')
+    anchor_price = models.DecimalField(max_digits=12, decimal_places=2, verbose_name='锚点价格')
+    adjust_ratio = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('1.0'), verbose_name='调整倍率')
+    target_price = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name='治理价格')
+    record_date = models.DateField(verbose_name='数据年月')
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, verbose_name='创建人')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = '锚点价格'
+        verbose_name_plural = '锚点价格'
+
+    def save(self, *args, **kwargs):
+        self.target_price = round(self.anchor_price * self.adjust_ratio, 2)
+        super().save(*args, **kwargs)
+
+
+class PharmacyUser(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='pharmacy_profile')
+    pharmacy = models.ForeignKey(Pharmacy, on_delete=models.CASCADE, related_name='users')
+
+    class Meta:
+        verbose_name = '药店用户'
+        verbose_name_plural = '药店用户'
+
+
+class CompanyUser(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='company_profile')
+    company = models.ForeignKey(PharmaceuticalCompany, on_delete=models.CASCADE, related_name='users')
+
+    class Meta:
+        verbose_name = '药企用户'
+        verbose_name_plural = '药企用户'
+
+
+class District(models.Model):
+    name = models.CharField(max_length=100, verbose_name='区县名称')
+    code = models.CharField(max_length=50, unique=True, verbose_name='区县编码')
+
+    class Meta:
+        verbose_name = '区县'
+        verbose_name_plural = '区县'
+
+    def __str__(self):
+        return self.name
+
+
+class PharmacyRecordReview(models.Model):
+    pharmacy_record = models.ForeignKey(PharmacyRecord, on_delete=models.CASCADE, related_name='reviews')
+    reviewer = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, verbose_name='审核人')
+    district = models.ForeignKey(District, on_delete=models.SET_NULL, null=True, verbose_name='审核区县')
+    status = models.CharField(max_length=20, choices=DrugRecordStatus.choices, default=DrugRecordStatus.UNDER_REVIEW, verbose_name='审核状态')
+    comment = models.TextField(blank=True, verbose_name='审核意见')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = '药店备案价审核'
+        verbose_name_plural = '药店备案价审核'
+
+
+class DrugPriceReview(models.Model):
+    drug = models.ForeignKey(Drug, on_delete=models.CASCADE, related_name='price_reviews')
+    reviewer = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, verbose_name='审核人')
+    original_price = models.DecimalField(max_digits=12, decimal_places=2, verbose_name='原价格')
+    proposed_price = models.DecimalField(max_digits=12, decimal_places=2, verbose_name='整改价格')
+    status = models.CharField(max_length=20, choices=DrugRecordStatus.choices, default=DrugRecordStatus.PENDING, verbose_name='审核状态')
+    comment = models.TextField(blank=True, verbose_name='审核意见')
+    created_at = models.DateTimeField(auto_now_add=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True, verbose_name='审核时间')
+
+    class Meta:
+        verbose_name = '药品挂网价审核'
+        verbose_name_plural = '药品挂网价审核'

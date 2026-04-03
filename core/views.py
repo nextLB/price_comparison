@@ -11,7 +11,8 @@ from .models import (
     User, Department, Role, Permission,
     Customer, Contact, Project, FollowUp,
     Trip, Expense, Drug, Pharmacy, PharmaceuticalCompany,
-    PharmacyRecord, CompanyRecord, DrugRecordStatus
+    PharmacyRecord, CompanyRecord, DrugRecordStatus, AnchorPrice,
+    PharmacyUser, CompanyUser, District, PharmacyRecordReview, DrugPriceReview
 )
 from .price_calculator import extract_number, process_all_drugs
 
@@ -43,6 +44,8 @@ def register_view(request):
         confirm_password = request.POST.get('confirm_password')
         email = request.POST.get('email', '')
         phone = request.POST.get('phone', '')
+        user_type = request.POST.get('user_type', 'pharmacy')
+        organization = request.POST.get('organization', '')
         
         if User.objects.filter(username=username).exists():
             messages.error(request, '用户名已存在')
@@ -54,7 +57,7 @@ def register_view(request):
         
         user = User.objects.create_user(
             username=username, email=email, password=password,
-            phone=phone, user_type='sales'
+            phone=phone, user_type=user_type, organization=organization
         )
         messages.success(request, '注册成功，请登录')
         return redirect('login')
@@ -618,7 +621,7 @@ def expense_approve(request, pk):
 
 @login_required
 def drug_list(request):
-    drugs = Drug.objects.all()
+    drugs = Drug.objects.all().order_by('id')
     
     code = request.GET.get('code')
     generic_name = request.GET.get('generic_name')
@@ -766,3 +769,569 @@ def company_import(request):
         return redirect('company_list')
     
     return render(request, 'core/drug/company_import.html')
+
+
+# ==================== 药事所监督科 ====================
+
+@login_required
+def supervisor_drug_list(request):
+    drugs = Drug.objects.all().order_by('id')
+    
+    code = request.GET.get('code')
+    generic_name = request.GET.get('generic_name')
+    
+    if code:
+        drugs = drugs.filter(code__icontains=code)
+    if generic_name:
+        drugs = drugs.filter(generic_name__icontains=generic_name)
+    
+    paginator = Paginator(drugs, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    return render(request, 'core/yaoshisuo/drug_list.html', {'page_obj': page_obj})
+
+
+@login_required
+def supervisor_pharmacy_list(request):
+    pharmacies = Pharmacy.objects.all()
+    
+    name = request.GET.get('name')
+    district = request.GET.get('district')
+    
+    if name:
+        pharmacies = pharmacies.filter(pharmacy_name__icontains=name)
+    if district:
+        pharmacies = pharmacies.filter(district__icontains=district)
+    
+    paginator = Paginator(pharmacies, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    return render(request, 'core/yaoshisuo/pharmacy_list.html', {'page_obj': page_obj})
+
+
+@login_required
+def supervisor_pharmacy_import(request):
+    if request.method == 'POST':
+        excel_file = request.FILES.get('excel_file')
+        df = pd.read_excel(excel_file)
+        
+        for _, row in df.iterrows():
+            Pharmacy.objects.update_or_create(
+                pharmacy_code=str(row.get('药店编码', '')),
+                defaults={
+                    'pharmacy_name': str(row.get('药店名称', '')),
+                    'medical_insurance_code': str(row.get('医保编码', '')),
+                    'district': str(row.get('区县', '')),
+                    'address': str(row.get('地址', '')),
+                    'phone': str(row.get('电话', '')),
+                }
+            )
+        
+        messages.success(request, f'成功导入 {len(df)} 条药店数据')
+        return redirect('supervisor_pharmacy_list')
+    
+    return render(request, 'core/yaoshisuo/pharmacy_import.html')
+
+
+@login_required
+def supervisor_pharmacy_create(request):
+    if request.method == 'POST':
+        Pharmacy.objects.create(
+            pharmacy_code=request.POST.get('pharmacy_code'),
+            pharmacy_name=request.POST.get('pharmacy_name'),
+            medical_insurance_code=request.POST.get('medical_insurance_code'),
+            district=request.POST.get('district'),
+            address=request.POST.get('address'),
+            phone=request.POST.get('phone'),
+        )
+        messages.success(request, '药店创建成功')
+        return redirect('supervisor_pharmacy_list')
+    
+    return render(request, 'core/yaoshisuo/pharmacy_form.html')
+
+
+@login_required
+def supervisor_pharmacy_delete(request, pk):
+    pharmacy = get_object_or_404(Pharmacy, pk=pk)
+    pharmacy.delete()
+    messages.success(request, '药店删除成功')
+    return redirect('supervisor_pharmacy_list')
+
+
+@login_required
+def supervisor_anchor_price_import(request):
+    if request.method == 'POST':
+        excel_file = request.FILES.get('excel_file')
+        record_date = request.POST.get('record_date')
+        
+        df = pd.read_excel(excel_file)
+        
+        for _, row in df.iterrows():
+            drug_code = str(row.get('统编代码', ''))
+            drug = Drug.objects.filter(code=drug_code).first()
+            if drug:
+                AnchorPrice.objects.update_or_create(
+                    drug=drug,
+                    record_date=record_date,
+                    defaults={
+                        'anchor_price': extract_number(row.get('锚点价格', 0)),
+                        'adjust_ratio': extract_number(row.get('调整倍率', 1.0)),
+                        'created_by': request.user,
+                    }
+                )
+        
+        messages.success(request, f'成功导入锚点价格')
+        return redirect('supervisor_anchor_price_list')
+    
+    return render(request, 'core/yaoshisuo/import_anchor_price.html')
+
+
+@login_required
+def supervisor_anchor_price_list(request):
+    anchors = AnchorPrice.objects.all().select_related('drug').order_by('id')
+    
+    drug_code = request.GET.get('drug_code')
+    
+    if drug_code:
+        anchors = anchors.filter(drug__code__icontains=drug_code)
+    
+    paginator = Paginator(anchors, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    return render(request, 'core/yaoshisuo/anchor_price_list.html', {'page_obj': page_obj})
+
+
+@login_required
+def supervisor_anchor_price_edit(request, pk):
+    anchor = get_object_or_404(AnchorPrice, pk=pk)
+    if request.method == 'POST':
+        anchor.anchor_price = request.POST.get('anchor_price')
+        anchor.adjust_ratio = request.POST.get('adjust_ratio')
+        anchor.save()
+        messages.success(request, '锚点价格更新成功')
+        return redirect('supervisor_anchor_price_list')
+    return render(request, 'core/yaoshisuo/anchor_price_form.html', {'anchor': anchor})
+
+
+@login_required
+def supervisor_company_list(request):
+    companies = PharmaceuticalCompany.objects.all()
+    
+    name = request.GET.get('name')
+    
+    if name:
+        companies = companies.filter(company_name__icontains=name)
+    
+    paginator = Paginator(companies, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    return render(request, 'core/yaoshisuo/company_list.html', {'page_obj': page_obj})
+
+
+@login_required
+def supervisor_company_import(request):
+    if request.method == 'POST':
+        excel_file = request.FILES.get('excel_file')
+        df = pd.read_excel(excel_file)
+        
+        for _, row in df.iterrows():
+            PharmaceuticalCompany.objects.update_or_create(
+                company_code=str(row.get('机构编码', '')),
+                defaults={
+                    'company_name': str(row.get('企业名称', '')),
+                    'contact_person': str(row.get('联系人', '')),
+                    'phone': str(row.get('电话', '')),
+                    'address': str(row.get('地址', '')),
+                }
+            )
+        
+        messages.success(request, f'成功导入 {len(df)} 条药企数据')
+        return redirect('supervisor_company_list')
+    
+    return render(request, 'core/yaoshisuo/company_import.html')
+
+
+@login_required
+def supervisor_company_create(request):
+    if request.method == 'POST':
+        PharmaceuticalCompany.objects.create(
+            company_code=request.POST.get('company_code'),
+            company_name=request.POST.get('company_name'),
+            contact_person=request.POST.get('contact_person'),
+            phone=request.POST.get('phone'),
+            address=request.POST.get('address'),
+        )
+        messages.success(request, '药企创建成功')
+        return redirect('supervisor_company_list')
+    
+    return render(request, 'core/yaoshisuo/company_form.html')
+
+
+@login_required
+def supervisor_company_delete(request, pk):
+    company = get_object_or_404(PharmaceuticalCompany, pk=pk)
+    company.delete()
+    messages.success(request, '药企删除成功')
+    return redirect('supervisor_company_list')
+
+
+# ==================== 药事所药品科 ====================
+
+@login_required
+def drug_section_drug_list(request):
+    drugs = Drug.objects.all()
+    
+    code = request.GET.get('code')
+    generic_name = request.GET.get('generic_name')
+    
+    if code:
+        drugs = drugs.filter(code__icontains=code)
+    if generic_name:
+        drugs = drugs.filter(generic_name__icontains=generic_name)
+    
+    paginator = Paginator(drugs, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    return render(request, 'core/yaoqi/drug_list.html', {'page_obj': page_obj})
+
+
+@login_required
+def drug_section_review_list(request):
+    reviews = DrugPriceReview.objects.all().select_related('drug', 'reviewer')
+    
+    status = request.GET.get('status')
+    
+    if status:
+        reviews = reviews.filter(status=status)
+    
+    paginator = Paginator(reviews, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    return render(request, 'core/yaoqi/record_list.html', {'page_obj': page_obj})
+
+
+@login_required
+def drug_section_review_approve(request, pk):
+    review = get_object_or_404(DrugPriceReview, pk=pk)
+    action = request.POST.get('action')
+    
+    if action == 'approve':
+        review.status = DrugRecordStatus.APPROVED
+        review.drug.network_price = review.proposed_price
+        review.drug.save()
+    elif action == 'reject':
+        review.status = DrugRecordStatus.REJECTED
+    
+    review.reviewer = request.user
+    review.reviewed_at = datetime.now()
+    review.save()
+    
+    messages.success(request, '审核完成')
+    return redirect('drug_section_review_list')
+
+
+@login_required
+def drug_section_company_list(request):
+    companies = PharmaceuticalCompany.objects.all()
+    
+    name = request.GET.get('name')
+    
+    if name:
+        companies = companies.filter(company_name__icontains=name)
+    
+    paginator = Paginator(companies, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    return render(request, 'core/yaoqi/company_list.html', {'page_obj': page_obj})
+
+
+@login_required
+def drug_section_company_import(request):
+    if request.method == 'POST':
+        excel_file = request.FILES.get('excel_file')
+        df = pd.read_excel(excel_file)
+        
+        for _, row in df.iterrows():
+            PharmaceuticalCompany.objects.update_or_create(
+                company_code=str(row.get('机构编码', '')),
+                defaults={
+                    'company_name': str(row.get('企业名称', '')),
+                    'contact_person': str(row.get('联系人', '')),
+                    'phone': str(row.get('电话', '')),
+                }
+            )
+        
+        messages.success(request, f'成功导入 {len(df)} 条药企数据')
+        return redirect('drug_section_company_list')
+    
+    return render(request, 'core/yaoqi/company_import.html')
+
+
+# ==================== 药店端 ====================
+
+@login_required
+def pharmacy_drug_list(request):
+    drugs = Drug.objects.all()
+    
+    code = request.GET.get('code')
+    generic_name = request.GET.get('generic_name')
+    
+    if code:
+        drugs = drugs.filter(code__icontains=code)
+    if generic_name:
+        drugs = drugs.filter(generic_name__icontains=generic_name)
+    
+    paginator = Paginator(drugs, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    return render(request, 'core/yaodian/drug_list.html', {'page_obj': page_obj})
+
+
+@login_required
+def pharmacy_record_submit(request):
+    if request.method == 'POST':
+        excel_file = request.FILES.get('excel_file')
+        record_date = request.POST.get('record_date')
+        
+        df = pd.read_excel(excel_file)
+        
+        pharmacy = None
+        if request.user.user_type == 'pharmacy':
+            try:
+                pharmacy_user = request.user.pharmacy_profile.pharmacy
+            except:
+                pharmacy_user = None
+        
+        for _, row in df.iterrows():
+            drug_code = str(row.get('统编代码', ''))
+            drug = Drug.objects.filter(code=drug_code).first()
+            if drug and pharmacy:
+                PharmacyRecord.objects.update_or_create(
+                    pharmacy=pharmacy,
+                    drug=drug,
+                    record_date=record_date,
+                    defaults={
+                        'record_price': extract_number(row.get('备案价', 0)),
+                        'status': DrugRecordStatus.SUBMITTED,
+                    }
+                )
+        
+        messages.success(request, f'成功提交备案价')
+        return redirect('pharmacy_record_list')
+    
+    return render(request, 'core/yaodian/record_submit.html')
+
+
+@login_required
+def pharmacy_record_list(request):
+    pharmacy = None
+    if request.user.user_type == 'pharmacy':
+        try:
+            pharmacy = request.user.pharmacy_profile.pharmacy
+        except:
+            pharmacy = None
+    
+    if pharmacy:
+        records = PharmacyRecord.objects.filter(pharmacy=pharmacy).select_related('drug')
+    else:
+        records = PharmacyRecord.objects.none()
+    
+    drug_code = request.GET.get('drug_code')
+    status = request.GET.get('status')
+    
+    if drug_code:
+        records = records.filter(drug__code__icontains=drug_code)
+    if status:
+        records = records.filter(status=status)
+    
+    paginator = Paginator(records, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    return render(request, 'core/yaodian/record_list.html', {'page_obj': page_obj})
+
+
+# ==================== 药企端 ====================
+
+@login_required
+def company_drug_list(request):
+    drugs = Drug.objects.all()
+    
+    code = request.GET.get('code')
+    generic_name = request.GET.get('generic_name')
+    
+    if code:
+        drugs = drugs.filter(code__icontains=code)
+    if generic_name:
+        drugs = drugs.filter(generic_name__icontains=generic_name)
+    
+    paginator = Paginator(drugs, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    return render(request, 'core/yaoqi/drug_list.html', {'page_obj': page_obj})
+
+
+@login_required
+def company_record_submit(request):
+    if request.method == 'POST':
+        excel_file = request.FILES.get('excel_file')
+        record_date = request.POST.get('record_date')
+        
+        df = pd.read_excel(excel_file)
+        
+        company = None
+        if request.user.user_type == 'company':
+            try:
+                company = request.user.company_profile.company
+            except:
+                company = None
+        
+        for _, row in df.iterrows():
+            drug_code = str(row.get('统编代码', ''))
+            drug = Drug.objects.filter(code=drug_code).first()
+            if drug and company:
+                CompanyRecord.objects.update_or_create(
+                    company=company,
+                    drug=drug,
+                    record_date=record_date,
+                    defaults={
+                        'declared_price': extract_number(row.get('申报价', 0)),
+                        'status': DrugRecordStatus.SUBMITTED,
+                    }
+                )
+        
+        messages.success(request, f'成功提交申报价')
+        return redirect('company_record_list')
+    
+    return render(request, 'core/yaoqi/record_submit.html')
+
+
+@login_required
+def company_record_list(request):
+    company = None
+    if request.user.user_type == 'company':
+        try:
+            company = request.user.company_profile.company
+        except:
+            company = None
+    
+    if company:
+        records = CompanyRecord.objects.filter(company=company).select_related('drug')
+    else:
+        records = CompanyRecord.objects.none()
+    
+    drug_code = request.GET.get('drug_code')
+    status = request.GET.get('status')
+    
+    if drug_code:
+        records = records.filter(drug__code__icontains=drug_code)
+    if status:
+        records = records.filter(status=status)
+    
+    paginator = Paginator(records, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    return render(request, 'core/yaoqi/record_list.html', {'page_obj': page_obj})
+
+
+# ==================== 区县医保局 ====================
+
+@login_required
+def district_pharmacy_record_list(request):
+    if request.user.user_type == 'district':
+        district_name = request.user.organization
+    else:
+        district_name = request.GET.get('district', '')
+    
+    records = PharmacyRecord.objects.all().select_related('drug', 'pharmacy').order_by('id')
+    
+    if district_name:
+        records = records.filter(pharmacy__district__icontains=district_name)
+    
+    drug_code = request.GET.get('drug_code')
+    status = request.GET.get('status')
+    
+    if drug_code:
+        records = records.filter(drug__code__icontains=drug_code)
+    if status:
+        records = records.filter(status=status)
+    else:
+        records = records.filter(status=DrugRecordStatus.SUBMITTED)
+    
+    paginator = Paginator(records, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    return render(request, 'core/quxian/record_review.html', {'page_obj': page_obj})
+
+
+@login_required
+def district_pharmacy_record_review(request, pk):
+    record = get_object_or_404(PharmacyRecord, pk=pk)
+    action = request.POST.get('action')
+    comment = request.POST.get('comment', '')
+    
+    if action == 'approve':
+        record.status = DrugRecordStatus.APPROVED
+    elif action == 'reject':
+        record.status = DrugRecordStatus.REJECTED
+    
+    record.save()
+    
+    PharmacyRecordReview.objects.create(
+        pharmacy_record=record,
+        reviewer=request.user,
+        status=record.status,
+        comment=comment,
+    )
+    
+    messages.success(request, '审核完成')
+    return redirect('district_pharmacy_record_list')
+
+
+@login_required
+def calculate_ratio(request):
+    if request.method == 'POST':
+        basis = request.POST.get('basis', 'max')
+        
+        drugs = Drug.objects.all()
+        drug_list = []
+        for drug in drugs:
+            drug_list.append({
+                'id': drug.id,
+                'code': drug.code,
+                'drug_category': drug.drug_category,
+                'generic_name': drug.generic_name,
+                'catalog_dosage_form': drug.catalog_dosage_form,
+                'content': drug.content,
+                'volume': drug.volume,
+                'quantity': drug.quantity,
+                'usage_days': drug.usage_days,
+                'standard_holder': drug.standard_holder,
+                'catalog_name': drug.catalog_name,
+                'network_price': drug.network_price,
+            })
+        
+        drug_list = process_all_drugs(drug_list, basis=basis)
+        
+        for drug_data in drug_list:
+            Drug.objects.filter(id=drug_data['id']).update(
+                is_standard=drug_data.get('is_standard', False),
+                standard_price=drug_data.get('standard_price', 0),
+                price_diff=drug_data.get('price_diff', 0),
+            )
+        
+        messages.success(request, '差比价计算完成')
+        return redirect('supervisor_drug_list')
+    
+    return render(request, 'core/yaoshisuo/calculate_ratio.html')

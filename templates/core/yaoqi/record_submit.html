@@ -2,15 +2,11 @@
 
 {% block title %}挂网价申报{% endblock %}
 
-{% block nav_items %}
-<li class="nav-item"><a class="nav-link" href="{% url 'company_record_submit' %}">挂网价申报</a></li>
-<li class="nav-item"><a class="nav-link" href="{% url 'company_record_list' %}">挂网价查询</a></li>
-{% endblock %}
-
 {% block sidebar %}
 <div class="p-3"><h5>导航菜单</h5></div>
+<a href="{% url 'company_drug_list' %}">药品挂网价查询</a>
 <a href="{% url 'company_record_submit' %}">挂网价申报</a>
-<a href="{% url 'company_record_list' %}">挂网价查询</a>
+<a href="{% url 'company_record_list' %}">申报记录查询</a>
 {% endblock %}
 
 {% block content %}
@@ -21,7 +17,7 @@
             {% csrf_token %}
             <div class="mb-3">
                 <label class="form-label">数据年月</label>
-                <input type="date" name="record_date" class="form-control" value="{{ today }}">
+                <input type="month" name="record_date" class="form-control" required>
             </div>
             <div class="mb-3">
                 <label class="form-label">选择Excel文件</label>
@@ -35,6 +31,7 @@
                 </ul>
             </div>
             <button type="submit" class="btn btn-primary">提交</button>
+            <a href="{% url 'company_record_list' %}" class="btn btn-secondary">返回</a>
         </form>
     </div>
 </div>
