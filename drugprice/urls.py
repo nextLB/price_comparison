@@ -53,6 +53,7 @@ urlpatterns = [
     
     # 药品差比价管理
     path('drugs/', v.drug_list, name='drug_list'),
+    path('drugs/export/', v.export_drugs_excel, name='drug_export'),
     path('drugs/import/', v.drug_import, name='drug_import'),
     path('drugs/calculate/', v.drug_calculate, name='drug_calculate'),
     path('drugs/import-drugs/', v.drug_import, name='import_drugs'),
@@ -70,6 +71,7 @@ urlpatterns = [
     path('supervisor/pharmacies/<int:pk>/delete/', v.supervisor_pharmacy_delete, name='supervisor_pharmacy_delete'),
     path('supervisor/anchor-prices/', v.supervisor_anchor_price_list, name='supervisor_anchor_price_list'),
     path('supervisor/anchor-prices/import/', v.supervisor_anchor_price_import, name='supervisor_anchor_price_import'),
+    path('supervisor/anchor-prices/export/', v.export_anchor_price_excel, name='anchor_price_export'),
     path('supervisor/anchor-prices/<int:pk>/edit/', v.supervisor_anchor_price_edit, name='supervisor_anchor_price_edit'),
     path('supervisor/companies/', v.supervisor_company_list, name='supervisor_company_list'),
     path('supervisor/companies/import/', v.supervisor_company_import, name='supervisor_company_import'),
@@ -88,6 +90,7 @@ urlpatterns = [
     path('pharmacy/drugs/', v.pharmacy_drug_list, name='pharmacy_drug_list'),
     path('pharmacy/records/submit/', v.pharmacy_record_submit, name='pharmacy_record_submit'),
     path('pharmacy/records/', v.pharmacy_record_list, name='pharmacy_record_list'),
+    path('pharmacy/records/export/', v.export_pharmacy_records_excel, name='pharmacy_record_export'),
     
     # 药企端
     path('company/drugs/', v.company_drug_list, name='company_drug_list'),
@@ -96,7 +99,7 @@ urlpatterns = [
     
     # 区县医保局
     path('district/pharmacy-records/', v.district_pharmacy_record_list, name='district_pharmacy_record_list'),
+    path('district/pharmacy-records/export/', v.export_district_pharmacy_records_excel, name='district_pharmacy_record_export'),
     path('district/pharmacy-records/<int:pk>/review/', v.district_pharmacy_record_review, name='district_pharmacy_record_review'),
-    path('district/pharmacy-records/all/', v.district_pharmacy_record_list, name='pharmacy_record_review'),
     path('district/records/', v.district_pharmacy_record_list, name='district_record_review'),
 ]

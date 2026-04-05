@@ -11,11 +11,18 @@
 
 {% block content %}
 <h2>备案价查询</h2>
+<a href="{% url 'pharmacy_record_export' %}" class="btn btn-info mb-3">导出</a>
 <form method="get" class="row g-3 mb-3">
-    <div class="col-md-3">
+    <div class="col-md-2">
         <input type="text" name="drug_code" class="form-control" placeholder="统编代码" value="{{ request.GET.drug_code|default:'' }}">
     </div>
-    <div class="col-md-3">
+    <div class="col-md-2">
+        <input type="text" name="generic_name" class="form-control" placeholder="通用名" value="{{ request.GET.generic_name|default:'' }}">
+    </div>
+    <div class="col-md-2">
+        <input type="text" name="spec_package" class="form-control" placeholder="规格" value="{{ request.GET.spec_package|default:'' }}">
+    </div>
+    <div class="col-md-2">
         <select name="status" class="form-select">
             <option value="">全部状态</option>
             <option value="已提交" {% if request.GET.status == '已提交' %}selected{% endif %}>已提交</option>
@@ -24,7 +31,10 @@
             <option value="审核不通过" {% if request.GET.status == '审核不通过' %}selected{% endif %}>审核不通过</option>
         </select>
     </div>
-    <div class="col-md-3">
+    <div class="col-md-2">
+        <input type="month" name="record_date" class="form-control" value="{{ request.GET.record_date|default:'' }}">
+    </div>
+    <div class="col-md-2">
         <button type="submit" class="btn btn-primary">查询</button>
         <a href="{% url 'pharmacy_record_list' %}" class="btn btn-secondary">重置</a>
     </div>
@@ -33,11 +43,15 @@
 <table class="table table-striped">
     <thead>
         <tr>
+            <th>序号</th>
+            <th>注册区县</th>
+            <th>药店名称</th>
+            <th>药店代码</th>
             <th>统编代码</th>
             <th>通用名</th>
+            <th>上市许可持有人</th>
             <th>规格包装</th>
             <th>备案价</th>
-            <th>挂网价</th>
             <th>数据年月</th>
             <th>状态</th>
         </tr>
@@ -45,16 +59,20 @@
     <tbody>
         {% for record in page_obj %}
         <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ record.pharmacy.district }}</td>
+            <td>{{ record.pharmacy.pharmacy_name }}</td>
+            <td>{{ record.pharmacy.pharmacy_code }}</td>
             <td>{{ record.drug.code }}</td>
             <td>{{ record.drug.generic_name }}</td>
-            <td>{{ record.drug.spec_package }}</td>
+            <td>{{ record.drug.standard_holder|default:'-' }}</td>
+            <td>{{ record.drug.spec_package|default:'-' }}</td>
             <td>{{ record.record_price }}</td>
-            <td>{{ record.drug.network_price }}</td>
             <td>{{ record.record_date }}</td>
             <td>{{ record.get_status_display }}</td>
         </tr>
         {% empty %}
-        <tr><td colspan="7" class="text-center">暂无数据</td></tr>
+        <tr><td colspan="11" class="text-center">暂无数据</td></tr>
         {% endfor %}
     </tbody>
 </table>

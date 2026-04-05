@@ -5,16 +5,18 @@
 <h2>药品列表</h2>
 <a href="{% url 'drug_import' %}" class="btn btn-primary mb-3">导入药品</a>
 <a href="{% url 'drug_calculate' %}" class="btn btn-success mb-3">计算差比价</a>
+<a href="{% url 'drug_export' %}" class="btn btn-info mb-3">导出药品</a>
 
 <form method="get" class="row g-3 mb-3">
-    <div class="col-md-4">
+    <div class="col-md-3">
         <input type="text" name="code" class="form-control" placeholder="统编代码" value="{{ request.GET.code|default:'' }}">
     </div>
-    <div class="col-md-4">
+    <div class="col-md-3">
         <input type="text" name="generic_name" class="form-control" placeholder="通用名" value="{{ request.GET.generic_name|default:'' }}">
     </div>
     <div class="col-md-4">
         <button type="submit" class="btn btn-primary">查询</button>
+        <a href="{% url 'drug_list' %}" class="btn btn-secondary">重置</a>
     </div>
 </form>
 
@@ -35,7 +37,7 @@
     </thead>
     <tbody>
         {% for drug in page_obj %}
-        <tr style="{% if drug.price_diff > 0 %}background-color: #fff3cd;{% endif %}">
+        <tr style="{% if drug.price_diff > 0 %}background-color: #fff3cd;{% elif drug.is_standard %}{% else %}background-color: #e9ecef;{% endif %}">
             <td>{{ drug.code }}</td>
             <td>{{ drug.generic_name }}</td>
             <td>{{ drug.drug_category }}</td>

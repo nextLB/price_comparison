@@ -4,8 +4,11 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Q
+from django.http import HttpResponse
 from datetime import datetime, date
 import pandas as pd
+from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 
 from .models import (
     User, Department, Role, Permission,
@@ -619,6 +622,40 @@ def expense_approve(request, pk):
 
 # ==================== 药品差比价管理 ====================
 
+def export_drugs_excel(request):
+    code = request.GET.get('code')
+    generic_name = request.GET.get('generic_name')
+    
+    drugs = Drug.objects.all().order_by('id')
+    if code:
+        drugs = drugs.filter(code__icontains=code)
+    if generic_name:
+        drugs = drugs.filter(generic_name__icontains=generic_name)
+    
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "药品数据"
+    
+    headers = ['统编代码', '通用名', '药品分类', '目录剂型', '规格包装', '含量', '装量', '计价数量', '服用天数', '标化持有人', '医保目录名', '挂网价', '锚点价格', '差比价', '价差对比', '是否标准品']
+    ws.append(headers)
+    
+    for drug in drugs:
+        ws.append([
+            drug.code, drug.generic_name, drug.drug_category,
+            drug.catalog_dosage_form, drug.spec_package, drug.content,
+            drug.volume, drug.quantity, drug.usage_days, drug.standard_holder,
+            drug.catalog_name, float(drug.network_price), float(drug.anchor_price) if drug.anchor_price else 0,
+            float(drug.standard_price) if drug.standard_price else 0,
+            float(drug.price_diff) if drug.price_diff else 0,
+            '是' if drug.is_standard else '否'
+        ])
+    
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename=药品数据_{datetime.now().strftime("%Y%m%d")}.xlsx'
+    wb.save(response)
+    return response
+
+
 @login_required
 def drug_list(request):
     drugs = Drug.objects.all().order_by('id')
@@ -893,15 +930,52 @@ def supervisor_anchor_price_list(request):
     anchors = AnchorPrice.objects.all().select_related('drug').order_by('id')
     
     drug_code = request.GET.get('drug_code')
+    generic_name = request.GET.get('generic_name')
     
     if drug_code:
         anchors = anchors.filter(drug__code__icontains=drug_code)
+    if generic_name:
+        anchors = anchors.filter(drug__generic_name__icontains=generic_name)
     
     paginator = Paginator(anchors, 20)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
     return render(request, 'core/yaoshisuo/anchor_price_list.html', {'page_obj': page_obj})
+
+
+def export_anchor_price_excel(request):
+    drug_code = request.GET.get('drug_code')
+    generic_name = request.GET.get('generic_name')
+    
+    anchors = AnchorPrice.objects.all().select_related('drug')
+    
+    if drug_code:
+        anchors = anchors.filter(drug__code__icontains=drug_code)
+    if generic_name:
+        anchors = anchors.filter(drug__generic_name__icontains=generic_name)
+    
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "锚点价格"
+    
+    headers = ['统编代码', '通用名', '锚点价格', '调整倍率', '治理价格', '数据年月']
+    ws.append(headers)
+    
+    for anchor in anchors:
+        ws.append([
+            anchor.drug.code,
+            anchor.drug.generic_name,
+            float(anchor.anchor_price),
+            float(anchor.adjust_ratio),
+            float(anchor.target_price),
+            str(anchor.record_date)
+        ])
+    
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename=锚点价格_{datetime.now().strftime("%Y%m%d")}.xlsx'
+    wb.save(response)
+    return response
 
 
 @login_required
@@ -918,7 +992,7 @@ def supervisor_anchor_price_edit(request, pk):
 
 @login_required
 def supervisor_company_list(request):
-    companies = PharmaceuticalCompany.objects.all()
+    companies = PharmaceuticalCompany.objects.all().order_by('id')
     
     name = request.GET.get('name')
     
@@ -1076,6 +1150,58 @@ def drug_section_company_import(request):
 
 # ==================== 药店端 ====================
 
+def export_pharmacy_records_excel(request):
+    pharmacy = None
+    if request.user.user_type == 'pharmacy':
+        try:
+            pharmacy = request.user.pharmacy_profile.pharmacy
+        except:
+            pharmacy = None
+    
+    if pharmacy:
+        records = PharmacyRecord.objects.filter(pharmacy=pharmacy).select_related('drug', 'pharmacy')
+    else:
+        records = PharmacyRecord.objects.none()
+    
+    drug_code = request.GET.get('drug_code')
+    status = request.GET.get('status')
+    record_date = request.GET.get('record_date')
+    
+    if drug_code:
+        records = records.filter(drug__code__icontains=drug_code)
+    if status:
+        records = records.filter(status=status)
+    if record_date:
+        records = records.filter(record_date=record_date)
+    
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "药店备案价"
+    
+    headers = ['序号', '注册区县', '药店名称', '药店代码', '统编代码', '通用名', '上市许可持有人', '规格包装', '备案价', '数据年月', '状态']
+    ws.append(headers)
+    
+    for idx, record in enumerate(records, 1):
+        ws.append([
+            idx,
+            record.pharmacy.district,
+            record.pharmacy.pharmacy_name,
+            record.pharmacy.pharmacy_code,
+            record.drug.code,
+            record.drug.generic_name,
+            record.drug.standard_holder,
+            record.drug.spec_package,
+            float(record.record_price),
+            str(record.record_date),
+            record.get_status_display()
+        ])
+    
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename=药店备案价_{datetime.now().strftime("%Y%m%d")}.xlsx'
+    wb.save(response)
+    return response
+
+
 @login_required
 def pharmacy_drug_list(request):
     drugs = Drug.objects.all()
@@ -1106,25 +1232,62 @@ def pharmacy_record_submit(request):
         pharmacy = None
         if request.user.user_type == 'pharmacy':
             try:
-                pharmacy_user = request.user.pharmacy_profile.pharmacy
+                pharmacy = request.user.pharmacy_profile.pharmacy
             except:
-                pharmacy_user = None
+                pharmacy = None
         
-        for _, row in df.iterrows():
+        if not pharmacy:
+            messages.error(request, '未绑定药店')
+            return redirect('pharmacy_record_submit')
+        
+        success_count = 0
+        error_messages = []
+        
+        for idx, row in df.iterrows():
             drug_code = str(row.get('统编代码', ''))
+            record_price = extract_number(row.get('备案价', 0))
             drug = Drug.objects.filter(code=drug_code).first()
-            if drug and pharmacy:
-                PharmacyRecord.objects.update_or_create(
-                    pharmacy=pharmacy,
-                    drug=drug,
-                    record_date=record_date,
-                    defaults={
-                        'record_price': extract_number(row.get('备案价', 0)),
-                        'status': DrugRecordStatus.SUBMITTED,
-                    }
-                )
+            
+            if not drug:
+                error_messages.append(f'第{idx+1}行：药品{drug_code}不存在')
+                continue
+            
+            if record_price <= 0:
+                error_messages.append(f'第{idx+1}行：备案价必须大于0')
+                continue
+            
+            network_price = drug.network_price
+            if network_price <= 0:
+                error_messages.append(f'第{idx+1}行：药品{drug_code}挂网价为0，无法验证')
+                continue
+            
+            max_price = network_price * Decimal('1.15')
+            min_price = network_price / Decimal('1.3')
+            
+            if record_price > max_price:
+                error_messages.append(f'第{idx+1}行：备案价{record_price}高于挂网价1.15倍({max_price})')
+                continue
+            if record_price < min_price:
+                error_messages.append(f'第{idx+1}行：备案价{record_price}低于挂网价1/1.3倍({min_price})')
+                continue
+            
+            PharmacyRecord.objects.update_or_create(
+                pharmacy=pharmacy,
+                drug=drug,
+                record_date=record_date,
+                defaults={
+                    'record_price': record_price,
+                    'status': DrugRecordStatus.SUBMITTED,
+                }
+            )
+            success_count += 1
         
-        messages.success(request, f'成功提交备案价')
+        if success_count > 0:
+            messages.success(request, f'成功提交 {success_count} 条备案价')
+        if error_messages:
+            for msg in error_messages[:10]:
+                messages.warning(request, msg)
+        
         return redirect('pharmacy_record_list')
     
     return render(request, 'core/yaodian/record_submit.html')
@@ -1140,17 +1303,26 @@ def pharmacy_record_list(request):
             pharmacy = None
     
     if pharmacy:
-        records = PharmacyRecord.objects.filter(pharmacy=pharmacy).select_related('drug')
+        records = PharmacyRecord.objects.filter(pharmacy=pharmacy).select_related('drug', 'pharmacy')
     else:
         records = PharmacyRecord.objects.none()
     
     drug_code = request.GET.get('drug_code')
+    generic_name = request.GET.get('generic_name')
+    spec_package = request.GET.get('spec_package')
     status = request.GET.get('status')
+    record_date = request.GET.get('record_date')
     
     if drug_code:
         records = records.filter(drug__code__icontains=drug_code)
+    if generic_name:
+        records = records.filter(drug__generic_name__icontains=generic_name)
+    if spec_package:
+        records = records.filter(drug__spec_package__icontains=spec_package)
     if status:
         records = records.filter(status=status)
+    if record_date:
+        records = records.filter(record_date=record_date)
     
     paginator = Paginator(records, 20)
     page_number = request.GET.get('page')
@@ -1259,10 +1431,19 @@ def district_pharmacy_record_list(request):
         records = records.filter(pharmacy__district__icontains=district_name)
     
     drug_code = request.GET.get('drug_code')
+    generic_name = request.GET.get('generic_name')
+    pharmacy_name = request.GET.get('pharmacy_name')
+    pharmacy_code = request.GET.get('pharmacy_code')
     status = request.GET.get('status')
     
     if drug_code:
         records = records.filter(drug__code__icontains=drug_code)
+    if generic_name:
+        records = records.filter(drug__generic_name__icontains=generic_name)
+    if pharmacy_name:
+        records = records.filter(pharmacy__pharmacy_name__icontains=pharmacy_name)
+    if pharmacy_code:
+        records = records.filter(pharmacy__pharmacy_code__icontains=pharmacy_code)
     if status:
         records = records.filter(status=status)
     else:
@@ -1273,6 +1454,58 @@ def district_pharmacy_record_list(request):
     page_obj = paginator.get_page(page_number)
     
     return render(request, 'core/quxian/record_review.html', {'page_obj': page_obj})
+
+
+def export_district_pharmacy_records_excel(request):
+    if request.user.user_type == 'district':
+        district_name = request.user.organization
+    else:
+        district_name = request.GET.get('district', '')
+    
+    records = PharmacyRecord.objects.all().select_related('drug', 'pharmacy')
+    
+    if district_name:
+        records = records.filter(pharmacy__district__icontains=district_name)
+    
+    drug_code = request.GET.get('drug_code')
+    generic_name = request.GET.get('generic_name')
+    pharmacy_name = request.GET.get('pharmacy_name')
+    status = request.GET.get('status')
+    
+    if drug_code:
+        records = records.filter(drug__code__icontains=drug_code)
+    if generic_name:
+        records = records.filter(drug__generic_name__icontains=generic_name)
+    if pharmacy_name:
+        records = records.filter(pharmacy__pharmacy_name__icontains=pharmacy_name)
+    if status:
+        records = records.filter(status=status)
+    else:
+        records = records.filter(status=DrugRecordStatus.SUBMITTED)
+    
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "药店备案价审核"
+    
+    headers = ['药店名称', '药店代码', '统编代码', '通用名', '上市许可持有人', '备案价', '数据年月', '状态']
+    ws.append(headers)
+    
+    for record in records:
+        ws.append([
+            record.pharmacy.pharmacy_name,
+            record.pharmacy.pharmacy_code,
+            record.drug.code,
+            record.drug.generic_name,
+            record.drug.standard_holder,
+            float(record.record_price),
+            str(record.record_date),
+            record.get_status_display()
+        ])
+    
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename=药店备案价审核_{datetime.now().strftime("%Y%m%d")}.xlsx'
+    wb.save(response)
+    return response
 
 
 @login_required

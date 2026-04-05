@@ -17,12 +17,16 @@
 <h2>锚点价格管理</h2>
 <div class="mb-3">
     <a href="{% url 'supervisor_anchor_price_import' %}" class="btn btn-primary">导入锚点价格</a>
+    <a href="{% url 'anchor_price_export' %}" class="btn btn-info">导出</a>
 </div>
 <form method="get" class="row g-3 mb-3">
-    <div class="col-md-4">
+    <div class="col-md-3">
         <input type="text" name="drug_code" class="form-control" placeholder="统编代码" value="{{ request.GET.drug_code|default:'' }}">
     </div>
-    <div class="col-md-4">
+    <div class="col-md-3">
+        <input type="text" name="generic_name" class="form-control" placeholder="通用名" value="{{ request.GET.generic_name|default:'' }}">
+    </div>
+    <div class="col-md-3">
         <button type="submit" class="btn btn-primary">查询</button>
         <a href="{% url 'supervisor_anchor_price_list' %}" class="btn btn-secondary">重置</a>
     </div>
