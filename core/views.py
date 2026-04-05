@@ -1112,7 +1112,7 @@ def drug_section_review_approve(request, pk):
 
 @login_required
 def drug_section_company_list(request):
-    companies = PharmaceuticalCompany.objects.all()
+    companies = PharmaceuticalCompany.objects.all().order_by('id')
     
     name = request.GET.get('name')
     
