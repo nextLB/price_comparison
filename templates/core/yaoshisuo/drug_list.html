@@ -15,6 +15,10 @@
 
 {% block content %}
 <h2>药品挂网价查询</h2>
+<a href="{% url 'drug_import' %}" class="btn btn-primary mb-3">导入药品</a>
+<a href="{% url 'calculate_ratio' %}" class="btn btn-success mb-3">计算差比价</a>
+<a href="{% url 'drug_export' %}" class="btn btn-info mb-3">导出药品</a>
+
 <form method="get" class="row g-3 mb-3">
     <div class="col-md-4">
         <input type="text" name="code" class="form-control" placeholder="统编代码" value="{{ request.GET.code|default:'' }}">
@@ -35,32 +39,32 @@
             <th>通用名</th>
             <th>药品分类</th>
             <th>目录剂型</th>
-            <th>规格包装</th>
+            <th>标化持有人</th>
             <th>挂网价</th>
-            <th>锚点价格</th>
             <th>差比价</th>
             <th>价差对比</th>
-            <th>标准品</th>
+            <th>单体差比值</th>
+            <th>标准品标记</th>
         </tr>
     </thead>
     <tbody>
         {% for drug in page_obj %}
-        <tr style="{% if drug.price_diff > 0 %}background-color: #fff3cd;{% endif %}">
+        <tr style="{% if drug.is_standard %}background-color: #d4edda;{% elif drug.price_diff > 0 %}background-color: #fff3cd;{% endif %}">
             <td>{{ drug.code }}</td>
             <td>{{ drug.generic_name }}</td>
             <td>{{ drug.drug_category }}</td>
             <td>{{ drug.catalog_dosage_form }}</td>
-            <td>{{ drug.spec_package }}</td>
+            <td>{{ drug.standard_holder|default:'-' }}</td>
             <td>{{ drug.network_price }}</td>
-            <td>{{ drug.anchor_price }}</td>
             <td>{{ drug.standard_price|default:'-' }}</td>
             <td style="{% if drug.price_diff > 0 %}color: red; font-weight: bold;{% endif %}">
                 {{ drug.price_diff|default:'-' }}
             </td>
-            <td>{{ drug.is_standard|yesno:'是,否' }}</td>
+            <td>{{ drug.unit_value|default:'-' }}</td>
+            <td>{% if drug.standard_mark %}<span class="badge bg-success">{{ drug.standard_mark }}</span>{% else %}-{% endif %}</td>
         </tr>
         {% empty %}
-        <tr><td colspan="10" class="text-center">暂无数据</td></tr>
+        <tr><td colspan="10" class="text-center">暂无数据，请先导入药品</td></tr>
         {% endfor %}
     </tbody>
 </table>

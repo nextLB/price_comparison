@@ -15,11 +15,15 @@
             <li>统编代码（必填）</li>
             <li>药品分类（必填）</li>
             <li>通用名（必填）</li>
-            <li>目录剂型、规格包装、含量、装量</li>
-            <li>计价数量、服用天数</li>
-            <li>标化持有人、医保目录名</li>
+            <li>目录剂型、表述剂型、规格包装</li>
+            <li>含量、含量单位、装量、装量单位</li>
+            <li>计价数量、计价数量单位、包装数量</li>
+            <li>服用天数</li>
+            <li>标化持有人、目录序号&标化持有人</li>
+            <li>医保目录名、特殊标注</li>
             <li>挂网价</li>
         </ul>
+        <p><strong>支持格式：</strong>2026年一季度.xlsx（参见数据文档目录）</p>
     </div>
     <button type="submit" class="btn btn-primary">导入</button>
     <a href="{% url 'drug_list' %}" class="btn btn-secondary">返回</a>

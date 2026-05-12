@@ -20,6 +20,15 @@ from .models import (
 from .price_calculator import extract_number, process_all_drugs
 
 
+def _safe_str(val):
+    """安全转换值为字符串，处理NaN"""
+    if val is None:
+        return ''
+    if isinstance(val, float) and (val != val):
+        return ''
+    return str(val)
+
+
 # ==================== 认证相关 ====================
 
 def login_view(request):
@@ -625,31 +634,40 @@ def expense_approve(request, pk):
 def export_drugs_excel(request):
     code = request.GET.get('code')
     generic_name = request.GET.get('generic_name')
-    
+
     drugs = Drug.objects.all().order_by('id')
     if code:
         drugs = drugs.filter(code__icontains=code)
     if generic_name:
         drugs = drugs.filter(generic_name__icontains=generic_name)
-    
+
     wb = Workbook()
     ws = wb.active
     ws.title = "药品数据"
-    
-    headers = ['统编代码', '通用名', '药品分类', '目录剂型', '规格包装', '含量', '装量', '计价数量', '服用天数', '标化持有人', '医保目录名', '挂网价', '锚点价格', '差比价', '价差对比', '是否标准品']
+
+    headers = [
+        '统编代码', '药品分类', '通用名', '目录剂型', '表述剂型', '规格包装',
+        '标化持有人', '目录序号&标化持有人', '含量', '含量单位', '装量', '装量单位',
+        '计价数量单位', '包装数量', '计价数量', '服用天数', '挂网价', '特殊标注',
+        '标准品标记', '差比价', '价差对比', '单体差比值',
+    ]
     ws.append(headers)
-    
+
     for drug in drugs:
         ws.append([
-            drug.code, drug.generic_name, drug.drug_category,
-            drug.catalog_dosage_form, drug.spec_package, drug.content,
-            drug.volume, drug.quantity, drug.usage_days, drug.standard_holder,
-            drug.catalog_name, float(drug.network_price), float(drug.anchor_price) if drug.anchor_price else 0,
+            drug.code, drug.drug_category, drug.generic_name,
+            drug.catalog_dosage_form, drug.description_dosage_form, drug.spec_package,
+            drug.standard_holder, drug.catalog_holder,
+            drug.content, drug.content_unit, drug.volume, drug.volume_unit,
+            drug.quantity_unit, drug.package_quantity, drug.quantity, drug.usage_days,
+            float(drug.network_price) if drug.network_price else 0,
+            drug.special_note,
+            drug.standard_mark,
             float(drug.standard_price) if drug.standard_price else 0,
             float(drug.price_diff) if drug.price_diff else 0,
-            '是' if drug.is_standard else '否'
+            float(drug.unit_value) if drug.unit_value else 0,
         ])
-    
+
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     response['Content-Disposition'] = f'attachment; filename=药品数据_{datetime.now().strftime("%Y%m%d")}.xlsx'
     wb.save(response)
@@ -682,42 +700,55 @@ def drug_import(request):
         if not excel_file:
             messages.error(request, '请选择文件')
             return redirect('drug_import')
-        
+
         try:
             df = pd.read_excel(excel_file)
-            
+
             for _, row in df.iterrows():
+                defaults = {
+                    'drug_category': _safe_str(row.get('药品分类', '')),
+                    'generic_name': _safe_str(row.get('通用名', '')),
+                    'catalog_dosage_form': _safe_str(row.get('目录剂型', '')),
+                    'description_dosage_form': _safe_str(row.get('表述剂型', '')),
+                    'spec_package': _safe_str(row.get('规格包装', '')),
+                    'content': _safe_str(row.get('含量', '')),
+                    'content_unit': _safe_str(row.get('含量单位', '')),
+                    'volume': _safe_str(row.get('装量', '')),
+                    'volume_unit': _safe_str(row.get('装量单位', '')),
+                    'quantity': _safe_str(row.get('计价数量', '')),
+                    'quantity_unit': _safe_str(row.get('计价数量单位', '')),
+                    'package_quantity': _safe_str(row.get('包装数量', '')),
+                    'usage_days': _safe_str(row.get('服用天数', '')),
+                    'standard_holder': _safe_str(row.get('标化持有人', '')),
+                    'catalog_holder': _safe_str(row.get('目录序号&标化持有人', '')),
+                    'catalog_name': _safe_str(row.get('医保目录名', '')),
+                    'special_note': _safe_str(row.get('特殊标注', '')),
+                    'network_price': extract_number(row.get('挂网价', 0)),
+                }
                 Drug.objects.update_or_create(
                     code=str(row.get('统编代码', '')),
-                    defaults={
-                        'drug_category': str(row.get('药品分类', '')),
-                        'generic_name': str(row.get('通用名', '')),
-                        'catalog_dosage_form': str(row.get('目录剂型', '')),
-                        'spec_package': str(row.get('规格包装', '')),
-                        'content': str(row.get('含量', '')),
-                        'volume': str(row.get('装量', '')),
-                        'quantity': str(row.get('计价数量', '')),
-                        'usage_days': str(row.get('服用天数', '')),
-                        'standard_holder': str(row.get('标化持有人', '')),
-                        'catalog_name': str(row.get('医保目录名', '')),
-                        'network_price': extract_number(row.get('挂网价', 0)),
-                    }
+                    defaults=defaults,
                 )
-            
+
             messages.success(request, f'成功导入 {len(df)} 条药品数据')
         except Exception as e:
             messages.error(request, f'导入失败: {str(e)}')
-        
+
         return redirect('drug_list')
-    
+
     return render(request, 'core/drug/drug_import.html')
 
 
 @login_required
 def drug_calculate(request):
     if request.method == 'POST':
-        basis = request.POST.get('basis', 'max')
-        
+        match_catalog = request.POST.get('match_catalog') == 'on'
+        match_generic = request.POST.get('match_generic') == 'on'
+
+        if not match_catalog and not match_generic:
+            messages.error(request, '请至少选择一种匹配方式')
+            return redirect('drug_calculate')
+
         drugs = Drug.objects.all()
         drug_list = []
         for drug in drugs:
@@ -727,27 +758,41 @@ def drug_calculate(request):
                 'drug_category': drug.drug_category,
                 'generic_name': drug.generic_name,
                 'catalog_dosage_form': drug.catalog_dosage_form,
+                'description_dosage_form': drug.description_dosage_form,
                 'content': drug.content,
                 'volume': drug.volume,
                 'quantity': drug.quantity,
                 'usage_days': drug.usage_days,
                 'standard_holder': drug.standard_holder,
                 'catalog_name': drug.catalog_name,
+                'special_note': drug.special_note,
+                'spec_package': drug.spec_package,
                 'network_price': drug.network_price,
             })
-        
-        drug_list = process_all_drugs(drug_list, basis=basis)
-        
+
+        drug_list = process_all_drugs(
+            drug_list,
+            match_catalog=match_catalog,
+            match_generic=match_generic,
+        )
+
         for drug_data in drug_list:
             Drug.objects.filter(id=drug_data['id']).update(
                 is_standard=drug_data.get('is_standard', False),
+                standard_mark=drug_data.get('standard_mark', ''),
                 standard_price=drug_data.get('standard_price', 0),
                 price_diff=drug_data.get('price_diff', 0),
+                unit_value=drug_data.get('unit_value', 0),
             )
-        
-        messages.success(request, '差比价计算完成')
+
+        mode_desc = []
+        if match_catalog:
+            mode_desc.append('同医保目录')
+        if match_generic:
+            mode_desc.append('同通用名')
+        messages.success(request, f'差比价计算完成（匹配方式：{"+".join(mode_desc)}）')
         return redirect('drug_list')
-    
+
     return render(request, 'core/drug/drug_calculate.html')
 
 
@@ -1535,8 +1580,13 @@ def district_pharmacy_record_review(request, pk):
 @login_required
 def calculate_ratio(request):
     if request.method == 'POST':
-        basis = request.POST.get('basis', 'max')
-        
+        match_catalog = request.POST.get('match_catalog') == 'on'
+        match_generic = request.POST.get('match_generic') == 'on'
+
+        if not match_catalog and not match_generic:
+            messages.error(request, '请至少选择一种匹配方式')
+            return redirect('calculate_ratio')
+
         drugs = Drug.objects.all()
         drug_list = []
         for drug in drugs:
@@ -1546,25 +1596,39 @@ def calculate_ratio(request):
                 'drug_category': drug.drug_category,
                 'generic_name': drug.generic_name,
                 'catalog_dosage_form': drug.catalog_dosage_form,
+                'description_dosage_form': drug.description_dosage_form,
                 'content': drug.content,
                 'volume': drug.volume,
                 'quantity': drug.quantity,
                 'usage_days': drug.usage_days,
                 'standard_holder': drug.standard_holder,
                 'catalog_name': drug.catalog_name,
+                'special_note': drug.special_note,
+                'spec_package': drug.spec_package,
                 'network_price': drug.network_price,
             })
-        
-        drug_list = process_all_drugs(drug_list, basis=basis)
-        
+
+        drug_list = process_all_drugs(
+            drug_list,
+            match_catalog=match_catalog,
+            match_generic=match_generic,
+        )
+
         for drug_data in drug_list:
             Drug.objects.filter(id=drug_data['id']).update(
                 is_standard=drug_data.get('is_standard', False),
+                standard_mark=drug_data.get('standard_mark', ''),
                 standard_price=drug_data.get('standard_price', 0),
                 price_diff=drug_data.get('price_diff', 0),
+                unit_value=drug_data.get('unit_value', 0),
             )
-        
-        messages.success(request, '差比价计算完成')
+
+        mode_desc = []
+        if match_catalog:
+            mode_desc.append('同医保目录')
+        if match_generic:
+            mode_desc.append('同通用名')
+        messages.success(request, f'差比价计算完成（匹配方式：{"+".join(mode_desc)}）')
         return redirect('supervisor_drug_list')
-    
+
     return render(request, 'core/yaoshisuo/calculate_ratio.html')

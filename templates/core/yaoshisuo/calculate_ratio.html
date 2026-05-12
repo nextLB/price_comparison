@@ -20,22 +20,27 @@
         <form method="post">
             {% csrf_token %}
             <div class="mb-3">
-                <label class="form-label">标准品选择方式</label>
+                <label class="form-label"><strong>二同药品匹配方式</strong>（可双选）</label>
                 <div class="form-check">
-                    <input class="form-check-input" type="radio" name="basis" value="max" id="basisMax" checked>
-                    <label class="form-check-label" for="basisMax">挂网价最高</label>
+                    <input class="form-check-input" type="checkbox" name="match_catalog" id="matchCatalog" checked>
+                    <label class="form-check-label" for="matchCatalog">
+                        同医保目录名 <small class="text-muted">（相同医保目录名 + 相同标化持有人）</small>
+                    </label>
                 </div>
                 <div class="form-check">
-                    <input class="form-check-input" type="radio" name="basis" value="min" id="basisMin">
-                    <label class="form-check-label" for="basisMin">挂网价最低</label>
+                    <input class="form-check-input" type="checkbox" name="match_generic" id="matchGeneric" checked>
+                    <label class="form-check-label" for="matchGeneric">
+                        同通用名 <small class="text-muted">（相同通用名 + 相同标化持有人）</small>
+                    </label>
                 </div>
             </div>
             <div class="alert alert-info">
-                <p><strong>说明：</strong></p>
+                <p><strong>匹配规则：</strong></p>
                 <ul>
-                    <li>计算时会将同医保目录名、同标化持有人的药品作为"二同药品"进行差比价计算</li>
-                    <li>如果没有同医保目录名，则使用同通用名进行计算</li>
-                    <li>系统会自动识别西药和中成药，使用不同的计算公式</li>
+                    <li><strong>仅选同医保目录名：</strong>只将医保目录名+标化持有人相同的药品归为一组计算</li>
+                    <li><strong>仅选同通用名：</strong>只将通用名（去剂型）+标化持有人相同的药品归为一组计算</li>
+                    <li><strong>双选（推荐）：</strong>优先按医保目录名匹配，再按特殊标注分组，最后按通用名匹配</li>
+                    <li>系统自动区分西药和中成药，标准品按<strong>单体差比值最低</strong>原则选定</li>
                 </ul>
             </div>
             <button type="submit" class="btn btn-primary">开始计算</button>
