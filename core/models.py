@@ -388,7 +388,7 @@ class AnchorPrice(models.Model):
         verbose_name_plural = '锚点价格'
 
     def save(self, *args, **kwargs):
-        self.target_price = round(self.anchor_price * self.adjust_ratio, 2)
+        self.target_price = round(Decimal(str(self.anchor_price)) * Decimal(str(self.adjust_ratio)), 2)
         super().save(*args, **kwargs)
 
 

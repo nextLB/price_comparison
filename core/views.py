@@ -408,7 +408,7 @@ def project_edit(request, pk):
     project = get_object_or_404(Project, pk=pk)
     if request.method == 'POST':
         project.name = request.POST.get('name')
-        project.budget = request.POST.get('budget')
+        project.budget = extract_number(request.POST.get('budget', 0))
         project.status = request.POST.get('status')
         project.start_date = request.POST.get('start_date') or None
         project.end_date = request.POST.get('end_date') or None
@@ -947,9 +947,11 @@ def supervisor_anchor_price_import(request):
     if request.method == 'POST':
         excel_file = request.FILES.get('excel_file')
         record_date = request.POST.get('record_date')
-        
+        if record_date and len(record_date) == 7:
+            record_date = record_date + '-01'
+
         df = pd.read_excel(excel_file)
-        
+
         for _, row in df.iterrows():
             drug_code = str(row.get('统编代码', ''))
             drug = Drug.objects.filter(code=drug_code).first()
@@ -1027,8 +1029,8 @@ def export_anchor_price_excel(request):
 def supervisor_anchor_price_edit(request, pk):
     anchor = get_object_or_404(AnchorPrice, pk=pk)
     if request.method == 'POST':
-        anchor.anchor_price = request.POST.get('anchor_price')
-        anchor.adjust_ratio = request.POST.get('adjust_ratio')
+        anchor.anchor_price = extract_number(request.POST.get('anchor_price', 0))
+        anchor.adjust_ratio = extract_number(request.POST.get('adjust_ratio', 1.0))
         anchor.save()
         messages.success(request, '锚点价格更新成功')
         return redirect('supervisor_anchor_price_list')
@@ -1271,9 +1273,11 @@ def pharmacy_record_submit(request):
     if request.method == 'POST':
         excel_file = request.FILES.get('excel_file')
         record_date = request.POST.get('record_date')
-        
+        if record_date and len(record_date) == 7:
+            record_date = record_date + '-01'
+
         df = pd.read_excel(excel_file)
-        
+
         pharmacy = None
         if request.user.user_type == 'pharmacy':
             try:
@@ -1402,9 +1406,11 @@ def company_record_submit(request):
     if request.method == 'POST':
         excel_file = request.FILES.get('excel_file')
         record_date = request.POST.get('record_date')
-        
+        if record_date and len(record_date) == 7:
+            record_date = record_date + '-01'
+
         df = pd.read_excel(excel_file)
-        
+
         company = None
         if request.user.user_type == 'company':
             try:
