@@ -1,16 +1,25 @@
 {% extends 'core/base.html' %}
 
-{% block title %}挂网价申报{% endblock %}
+{% block title %}药品挂网价申报{% endblock %}
 
 {% block sidebar %}
-<div class="p-3"><h5>导航菜单</h5></div>
+<div class="p-3"><h5>药企功能菜单</h5></div>
 <a href="{% url 'company_drug_list' %}">药品挂网价查询</a>
 <a href="{% url 'company_record_submit' %}">挂网价申报</a>
 <a href="{% url 'company_record_list' %}">申报记录查询</a>
 {% endblock %}
 
 {% block content %}
-<h2>挂网价申报</h2>
+<h2>药品挂网价申报</h2>
+{% if not user.company_profile.company %}
+<div class="alert alert-danger">
+    <strong>错误：</strong>您的账号尚未关联药企，请联系药事所药品科进行药企编码关系维护。
+</div>
+{% else %}
+<div class="alert alert-info mb-3">
+    <strong>当前药企：</strong>{{ user.company_profile.company.company_name }}
+    ({{ user.company_profile.company.company_code }})
+</div>
 <div class="card">
     <div class="card-body">
         <form method="post" enctype="multipart/form-data">
@@ -18,21 +27,36 @@
             <div class="mb-3">
                 <label class="form-label">数据年月</label>
                 <input type="month" name="record_date" class="form-control" required>
+                <small class="text-muted">请选择申报数据所属的年月</small>
             </div>
             <div class="mb-3">
                 <label class="form-label">选择Excel文件</label>
                 <input type="file" name="excel_file" class="form-control" accept=".xlsx,.xls" required>
+                <small class="text-muted">支持 .xlsx 和 .xls 格式</small>
+            </div>
+            <div class="alert alert-warning">
+                <p><strong>注意事项：</strong></p>
+                <ul>
+                    <li>申报价格将自动提交至<strong>药事所药品科</strong>进行审核</li>
+                    <li>审核通过后，申报价将更新为该药品的挂网价</li>
+                    <li><strong>药企名称必须与当前登录账号的药企名称一致</strong>（系统自动校验）</li>
+                </ul>
             </div>
             <div class="alert alert-info">
                 <p><strong>Excel文件需包含以下列：</strong></p>
-                <ul>
-                    <li>统编代码（必填）</li>
-                    <li>申报价（必填）</li>
-                </ul>
+                <table class="table table-sm table-bordered">
+                    <thead><tr><th>列名</th><th>是否必填</th><th>说明</th></tr></thead>
+                    <tbody>
+                        <tr><td>统编代码</td><td>必填</td><td>药品的统一编码</td></tr>
+                        <tr><td>申报价</td><td>必填</td><td>药企申报的挂网价格（元）</td></tr>
+                        <tr><td>企业名称</td><td>可选</td><td>系统自动校验是否与当前药企一致</td></tr>
+                    </tbody>
+                </table>
             </div>
-            <button type="submit" class="btn btn-primary">提交</button>
-            <a href="{% url 'company_record_list' %}" class="btn btn-secondary">返回</a>
+            <button type="submit" class="btn btn-primary">提交申报价</button>
+            <a href="{% url 'company_record_list' %}" class="btn btn-secondary">返回查询</a>
         </form>
     </div>
 </div>
+{% endif %}
 {% endblock %}

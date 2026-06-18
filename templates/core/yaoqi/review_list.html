@@ -1,0 +1,99 @@
+{% extends 'core/base.html' %}
+
+{% block title %}药品挂网价审核 - 药事所药品科{% endblock %}
+
+{% block sidebar %}
+<div class="p-3"><h5>药品科功能菜单</h5></div>
+<a href="{% url 'drug_section_drug_list' %}">药品挂网价查询</a>
+<a href="{% url 'drug_section_review_list' %}">挂网价审核</a>
+<a href="{% url 'drug_section_company_list' %}">药企编码关系维护</a>
+{% endblock %}
+
+{% block content %}
+<h2>药品挂网价审核</h2>
+<div class="alert alert-info mb-3">
+    <strong>功能说明：</strong>审核药企通过"药品挂网价申报"提交的整改价格。审核通过后，申报价格将自动更新为该药品的挂网价，并同步显示在"药品挂网价查询"中。<br>
+    <strong>联动说明：</strong>本模块与药企端"药品挂网价申报"联动——药企提交的申报价自动进入此审核列表。
+</div>
+
+<form method="get" class="row g-3 mb-3">
+    <div class="col-md-3">
+        <input type="text" name="drug_code" class="form-control" placeholder="统编代码" value="{{ request.GET.drug_code|default:'' }}">
+    </div>
+    <div class="col-md-3">
+        <input type="text" name="generic_name" class="form-control" placeholder="通用名" value="{{ request.GET.generic_name|default:'' }}">
+    </div>
+    <div class="col-md-3">
+        <select name="status" class="form-select">
+            <option value="">全部状态</option>
+            <option value="待整改" {% if request.GET.status == '待整改' %}selected{% endif %}>待整改</option>
+            <option value="审核通过" {% if request.GET.status == '审核通过' %}selected{% endif %}>审核通过</option>
+            <option value="审核不通过" {% if request.GET.status == '审核不通过' %}selected{% endif %}>审核不通过</option>
+        </select>
+    </div>
+    <div class="col-md-3">
+        <button type="submit" class="btn btn-primary">查询</button>
+        <a href="{% url 'drug_section_review_list' %}" class="btn btn-secondary">重置</a>
+    </div>
+</form>
+
+<table class="table table-striped table-hover">
+    <thead class="table-dark">
+        <tr>
+            <th>统编代码</th>
+            <th>通用名</th>
+            <th>上市许可持有人</th>
+            <th>规格包装</th>
+            <th>原挂网价</th>
+            <th>申报整改价</th>
+            <th>审核状态</th>
+            <th>审核意见</th>
+            <th>提交时间</th>
+            <th>操作</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for review in page_obj %}
+        <tr>
+            <td>{{ review.drug.code }}</td>
+            <td>{{ review.drug.generic_name }}</td>
+            <td>{{ review.drug.standard_holder|default:'-' }}</td>
+            <td>{{ review.drug.spec_package|default:'-' }}</td>
+            <td>{{ review.original_price }}</td>
+            <td><strong>{{ review.proposed_price }}</strong></td>
+            <td>
+                {% if review.status == '审核通过' %}
+                <span class="badge bg-success">{{ review.get_status_display }}</span>
+                {% elif review.status == '审核不通过' %}
+                <span class="badge bg-danger">{{ review.get_status_display }}</span>
+                {% else %}
+                <span class="badge bg-warning text-dark">{{ review.get_status_display }}</span>
+                {% endif %}
+            </td>
+            <td>{{ review.comment|default:'-'|truncatechars:30 }}</td>
+            <td>{{ review.created_at|date:"Y-m-d H:i" }}</td>
+            <td>
+                {% if review.status == '待整改' %}
+                <form method="post" action="{% url 'drug_section_review_approve' review.pk %}" style="display:inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="approve">
+                    <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('确认审核通过？\n通过后该药品挂网价将更新为：{{ review.proposed_price }}元')">通过</button>
+                </form>
+                <form method="post" action="{% url 'drug_section_review_approve' review.pk %}" style="display:inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="reject">
+                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('确认驳回该申报价？')">驳回</button>
+                </form>
+                {% else %}
+                <small class="text-muted">已处理</small>
+                {% endif %}
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="10" class="text-center">暂无待审核的挂网价申报记录</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% include 'core/includes/pagination.html' %}
+{% endblock %}

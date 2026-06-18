@@ -65,10 +65,13 @@ urlpatterns = [
     
     # 药事所监督科
     path('supervisor/drugs/', v.supervisor_drug_list, name='supervisor_drug_list'),
+    path('supervisor/pharmacy-records/', v.supervisor_pharmacy_record_list, name='supervisor_pharmacy_record_list'),
+    path('supervisor/pharmacy-records/export/', v.export_supervisor_pharmacy_records_excel, name='supervisor_pharmacy_record_export'),
     path('supervisor/pharmacies/', v.supervisor_pharmacy_list, name='supervisor_pharmacy_list'),
     path('supervisor/pharmacies/import/', v.supervisor_pharmacy_import, name='supervisor_pharmacy_import'),
     path('supervisor/pharmacies/create/', v.supervisor_pharmacy_create, name='supervisor_pharmacy_create'),
     path('supervisor/pharmacies/<int:pk>/delete/', v.supervisor_pharmacy_delete, name='supervisor_pharmacy_delete'),
+    path('supervisor/pharmacies/<int:pk>/link-user/', v.supervisor_pharmacy_link_user, name='supervisor_pharmacy_link_user'),
     path('supervisor/anchor-prices/', v.supervisor_anchor_price_list, name='supervisor_anchor_price_list'),
     path('supervisor/anchor-prices/import/', v.supervisor_anchor_price_import, name='supervisor_anchor_price_import'),
     path('supervisor/anchor-prices/export/', v.export_anchor_price_excel, name='anchor_price_export'),
@@ -77,6 +80,7 @@ urlpatterns = [
     path('supervisor/companies/import/', v.supervisor_company_import, name='supervisor_company_import'),
     path('supervisor/companies/create/', v.supervisor_company_create, name='supervisor_company_create'),
     path('supervisor/companies/<int:pk>/delete/', v.supervisor_company_delete, name='supervisor_company_delete'),
+    path('supervisor/companies/<int:pk>/link-user/', v.supervisor_company_link_user, name='supervisor_company_link_user'),
     path('supervisor/calculate-ratio/', v.calculate_ratio, name='calculate_ratio'),
     
     # 药事所药品科
@@ -85,6 +89,9 @@ urlpatterns = [
     path('drug-section/reviews/<int:pk>/approve/', v.drug_section_review_approve, name='drug_section_review_approve'),
     path('drug-section/companies/', v.drug_section_company_list, name='drug_section_company_list'),
     path('drug-section/companies/import/', v.drug_section_company_import, name='drug_section_company_import'),
+    path('drug-section/companies/create/', v.drug_section_company_create, name='drug_section_company_create'),
+    path('drug-section/companies/<int:pk>/delete/', v.drug_section_company_delete, name='drug_section_company_delete'),
+    path('drug-section/companies/<int:pk>/link-user/', v.drug_section_company_link_user, name='drug_section_company_link_user'),
     
     # 药店端
     path('pharmacy/drugs/', v.pharmacy_drug_list, name='pharmacy_drug_list'),

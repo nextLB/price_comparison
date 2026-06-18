@@ -4,7 +4,9 @@ from .models import (
     User, Department, Role, Permission,
     Customer, Contact, Project, FollowUp,
     Trip, Expense, Drug, Pharmacy, PharmaceuticalCompany,
-    PharmacyRecord, CompanyRecord
+    PharmacyRecord, CompanyRecord, AnchorPrice,
+    PharmacyUser, CompanyUser, District,
+    PharmacyRecordReview, DrugPriceReview,
 )
 
 
@@ -104,4 +106,40 @@ class PharmacyRecordAdmin(admin.ModelAdmin):
 @admin.register(CompanyRecord)
 class CompanyRecordAdmin(admin.ModelAdmin):
     list_display = ('company', 'drug', 'declared_price', 'record_date', 'status')
+    list_filter = ('status',)
+
+
+@admin.register(AnchorPrice)
+class AnchorPriceAdmin(admin.ModelAdmin):
+    list_display = ('drug', 'anchor_price', 'adjust_ratio', 'target_price', 'record_date', 'created_by')
+    list_filter = ('record_date',)
+
+
+@admin.register(PharmacyUser)
+class PharmacyUserAdmin(admin.ModelAdmin):
+    list_display = ('user', 'pharmacy')
+    search_fields = ('user__username', 'pharmacy__pharmacy_name')
+
+
+@admin.register(CompanyUser)
+class CompanyUserAdmin(admin.ModelAdmin):
+    list_display = ('user', 'company')
+    search_fields = ('user__username', 'company__company_name')
+
+
+@admin.register(District)
+class DistrictAdmin(admin.ModelAdmin):
+    list_display = ('name', 'code')
+    search_fields = ('name', 'code')
+
+
+@admin.register(PharmacyRecordReview)
+class PharmacyRecordReviewAdmin(admin.ModelAdmin):
+    list_display = ('pharmacy_record', 'reviewer', 'district', 'status', 'created_at')
+    list_filter = ('status',)
+
+
+@admin.register(DrugPriceReview)
+class DrugPriceReviewAdmin(admin.ModelAdmin):
+    list_display = ('drug', 'original_price', 'proposed_price', 'status', 'reviewer', 'created_at', 'reviewed_at')
     list_filter = ('status',)

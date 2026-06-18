@@ -58,22 +58,44 @@ def register_view(request):
         phone = request.POST.get('phone', '')
         user_type = request.POST.get('user_type', 'pharmacy')
         organization = request.POST.get('organization', '')
-        
+        medical_insurance_code = request.POST.get('medical_insurance_code', '')
+
         if User.objects.filter(username=username).exists():
             messages.error(request, '用户名已存在')
             return redirect('register')
-        
+
         if password != confirm_password:
             messages.error(request, '两次密码输入不一致')
             return redirect('register')
-        
+
         user = User.objects.create_user(
             username=username, email=email, password=password,
-            phone=phone, user_type=user_type, organization=organization
+            phone=phone, user_type=user_type, organization=organization,
+            medical_insurance_code=medical_insurance_code,
         )
+
+        # 如果是药店或药企用户注册，尝试自动关联
+        if user_type == 'pharmacy':
+            # 尝试按机构名称查找药店并自动关联
+            if organization:
+                pharmacy = Pharmacy.objects.filter(pharmacy_name=organization).first()
+                if pharmacy:
+                    PharmacyUser.objects.get_or_create(user=user, defaults={'pharmacy': pharmacy})
+                    messages.info(request, f'已自动关联至药店：{pharmacy.pharmacy_name}')
+                else:
+                    messages.warning(request, '注册成功！但未找到匹配的药店，请联系药事所监督科进行药店编码关系维护')
+        elif user_type == 'company':
+            if organization:
+                company = PharmaceuticalCompany.objects.filter(company_name=organization).first()
+                if company:
+                    CompanyUser.objects.get_or_create(user=user, defaults={'company': company})
+                    messages.info(request, f'已自动关联至药企：{company.company_name}')
+                else:
+                    messages.warning(request, '注册成功！但未找到匹配的药企，请联系药事所药品科进行药企编码关系维护')
+
         messages.success(request, '注册成功，请登录')
         return redirect('login')
-    
+
     return render(request, 'core/register.html')
 
 
@@ -84,12 +106,51 @@ def dashboard(request):
     user = request.user
     context = {
         'user': user,
-        'customer_count': Customer.objects.count(),
-        'project_count': Project.objects.count(),
-        'followup_count': FollowUp.objects.count(),
-        'expense_count': Expense.objects.count(),
         'drug_count': Drug.objects.count(),
+        'pharmacy_count': Pharmacy.objects.count(),
+        'company_count': PharmaceuticalCompany.objects.count(),
+        'user_count': User.objects.count(),
+        'anchor_count': AnchorPrice.objects.count(),
+        'pharmacy_record_count': PharmacyRecord.objects.count(),
+        'pending_review_count': DrugPriceReview.objects.filter(status=DrugRecordStatus.PENDING).count(),
+        'approved_review_count': DrugPriceReview.objects.filter(status=DrugRecordStatus.APPROVED).count(),
+        'rejected_review_count': DrugPriceReview.objects.filter(status=DrugRecordStatus.REJECTED).count(),
+        'pending_pharmacy_review_count': PharmacyRecord.objects.filter(status=DrugRecordStatus.SUBMITTED).count(),
     }
+
+    # 药店用户专用统计
+    if user.user_type == 'pharmacy':
+        try:
+            pharmacy = user.pharmacy_profile.pharmacy
+            context['my_record_count'] = PharmacyRecord.objects.filter(pharmacy=pharmacy).count()
+            context['my_approved_count'] = PharmacyRecord.objects.filter(
+                pharmacy=pharmacy, status=DrugRecordStatus.APPROVED
+            ).count()
+        except:
+            context['my_record_count'] = 0
+            context['my_approved_count'] = 0
+
+    # 药企用户专用统计
+    if user.user_type == 'company':
+        try:
+            company = user.company_profile.company
+            context['my_record_count'] = CompanyRecord.objects.filter(company=company).count()
+            context['my_approved_count'] = CompanyRecord.objects.filter(
+                company=company, status=DrugRecordStatus.APPROVED
+            ).count()
+        except:
+            context['my_record_count'] = 0
+            context['my_approved_count'] = 0
+
+    # 区县医保局专用统计
+    if user.user_type == 'district':
+        district_name = user.organization
+        if district_name:
+            base_qs = PharmacyRecord.objects.filter(pharmacy__district__icontains=district_name)
+            context['pending_review_count'] = base_qs.filter(status=DrugRecordStatus.SUBMITTED).count()
+            context['approved_review_count'] = base_qs.filter(status=DrugRecordStatus.APPROVED).count()
+            context['rejected_review_count'] = base_qs.filter(status=DrugRecordStatus.REJECTED).count()
+
     return render(request, 'core/dashboard.html', context)
 
 
@@ -856,6 +917,93 @@ def company_import(request):
 # ==================== 药事所监督科 ====================
 
 @login_required
+def supervisor_pharmacy_record_list(request):
+    """药事所监督科 - 药品备案价查询：查看所有药店的备案价记录"""
+    records = PharmacyRecord.objects.all().select_related('drug', 'pharmacy').order_by('-created_at')
+
+    drug_code = request.GET.get('drug_code')
+    generic_name = request.GET.get('generic_name')
+    pharmacy_name = request.GET.get('pharmacy_name')
+    district = request.GET.get('district')
+    status = request.GET.get('status')
+    record_date = request.GET.get('record_date')
+
+    if drug_code:
+        records = records.filter(drug__code__icontains=drug_code)
+    if generic_name:
+        records = records.filter(drug__generic_name__icontains=generic_name)
+    if pharmacy_name:
+        records = records.filter(pharmacy__pharmacy_name__icontains=pharmacy_name)
+    if district:
+        records = records.filter(pharmacy__district__icontains=district)
+    if status:
+        records = records.filter(status=status)
+    if record_date:
+        records = records.filter(record_date__startswith=record_date)
+
+    paginator = Paginator(records, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    return render(request, 'core/yaoshisuo/pharmacy_record_list.html', {'page_obj': page_obj})
+
+
+def export_supervisor_pharmacy_records_excel(request):
+    """药事所监督科 - 导出药店备案价"""
+    records = PharmacyRecord.objects.all().select_related('drug', 'pharmacy')
+
+    drug_code = request.GET.get('drug_code')
+    generic_name = request.GET.get('generic_name')
+    pharmacy_name = request.GET.get('pharmacy_name')
+    district = request.GET.get('district')
+    status = request.GET.get('status')
+    record_date = request.GET.get('record_date')
+
+    if drug_code:
+        records = records.filter(drug__code__icontains=drug_code)
+    if generic_name:
+        records = records.filter(drug__generic_name__icontains=generic_name)
+    if pharmacy_name:
+        records = records.filter(pharmacy__pharmacy_name__icontains=pharmacy_name)
+    if district:
+        records = records.filter(pharmacy__district__icontains=district)
+    if status:
+        records = records.filter(status=status)
+    if record_date:
+        records = records.filter(record_date__startswith=record_date)
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "药品备案价查询"
+
+    headers = ['序号', '区县', '药店名称', '药店编码', '医保编码', '统编代码', '通用名',
+               '上市许可持有人', '规格包装', '挂网价', '备案价', '数据年月', '状态', '提交时间']
+    ws.append(headers)
+
+    for idx, record in enumerate(records, 1):
+        ws.append([
+            idx,
+            record.pharmacy.district,
+            record.pharmacy.pharmacy_name,
+            record.pharmacy.pharmacy_code,
+            record.pharmacy.medical_insurance_code,
+            record.drug.code,
+            record.drug.generic_name,
+            record.drug.standard_holder,
+            record.drug.spec_package,
+            float(record.drug.network_price) if record.drug.network_price else 0,
+            float(record.record_price),
+            str(record.record_date),
+            record.get_status_display(),
+            record.created_at.strftime('%Y-%m-%d %H:%M') if record.created_at else '',
+        ])
+
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename=药品备案价_{datetime.now().strftime("%Y%m%d")}.xlsx'
+    wb.save(response)
+    return response
+
+@login_required
 def supervisor_drug_list(request):
     drugs = Drug.objects.all().order_by('id')
     
@@ -940,6 +1088,71 @@ def supervisor_pharmacy_delete(request, pk):
     pharmacy.delete()
     messages.success(request, '药店删除成功')
     return redirect('supervisor_pharmacy_list')
+
+
+@login_required
+def supervisor_pharmacy_link_user(request, pk):
+    """药事所监督科 - 药店编码关系维护：关联药店与用户账号"""
+    pharmacy = get_object_or_404(Pharmacy, pk=pk)
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        user_id = request.POST.get('user_id')
+
+        if action == 'link' and user_id:
+            user = get_object_or_404(User, pk=user_id)
+            # 更新用户类型为药店
+            user.user_type = 'pharmacy'
+            user.organization = pharmacy.pharmacy_name
+            user.medical_insurance_code = pharmacy.medical_insurance_code
+            user.save()
+            # 创建或更新药店用户关联
+            PharmacyUser.objects.update_or_create(
+                user=user,
+                defaults={'pharmacy': pharmacy},
+            )
+            messages.success(request, f'已将用户"{user.username}"关联至药店"{pharmacy.pharmacy_name}"')
+
+        elif action == 'unlink' and user_id:
+            user = get_object_or_404(User, pk=user_id)
+            try:
+                pu = PharmacyUser.objects.get(user=user, pharmacy=pharmacy)
+                pu.delete()
+                messages.success(request, f'已解除用户"{user.username}"与药店"{pharmacy.pharmacy_name}"的关联')
+            except PharmacyUser.DoesNotExist:
+                messages.warning(request, '该用户未关联此药店')
+
+        elif action == 'create_user':
+            username = request.POST.get('username', '').strip()
+            password = request.POST.get('password', '')
+            if username and password:
+                if User.objects.filter(username=username).exists():
+                    messages.error(request, f'用户名"{username}"已存在')
+                else:
+                    user = User.objects.create_user(
+                        username=username,
+                        password=password,
+                        user_type='pharmacy',
+                        organization=pharmacy.pharmacy_name,
+                        medical_insurance_code=pharmacy.medical_insurance_code,
+                    )
+                    PharmacyUser.objects.create(user=user, pharmacy=pharmacy)
+                    messages.success(request, f'已创建药店用户"{username}"并关联至药店"{pharmacy.pharmacy_name}"')
+
+        return redirect('supervisor_pharmacy_link_user', pk=pk)
+
+    # 获取已关联的用户
+    linked_users = PharmacyUser.objects.filter(pharmacy=pharmacy).select_related('user')
+    # 获取可选用户（药店类型且未关联此药店）
+    available_users = User.objects.filter(user_type='pharmacy').exclude(
+        pk__in=PharmacyUser.objects.filter(pharmacy=pharmacy).values('user_id')
+    )
+
+    return render(request, 'core/yaoshisuo/pharmacy_link_user.html', {
+        'pharmacy': pharmacy,
+        'linked_users': linked_users,
+        'available_users': available_users,
+    })
 
 
 @login_required
@@ -1100,6 +1313,65 @@ def supervisor_company_delete(request, pk):
     return redirect('supervisor_company_list')
 
 
+@login_required
+def supervisor_company_link_user(request, pk):
+    """药事所监督科 - 药企编码关系维护：关联药企与用户账号"""
+    company = get_object_or_404(PharmaceuticalCompany, pk=pk)
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        user_id = request.POST.get('user_id')
+
+        if action == 'link' and user_id:
+            user = get_object_or_404(User, pk=user_id)
+            user.user_type = 'company'
+            user.organization = company.company_name
+            user.save()
+            CompanyUser.objects.update_or_create(
+                user=user,
+                defaults={'company': company},
+            )
+            messages.success(request, f'已将用户"{user.username}"关联至药企"{company.company_name}"')
+
+        elif action == 'unlink' and user_id:
+            user = get_object_or_404(User, pk=user_id)
+            try:
+                cu = CompanyUser.objects.get(user=user, company=company)
+                cu.delete()
+                messages.success(request, f'已解除用户"{user.username}"与药企"{company.company_name}"的关联')
+            except CompanyUser.DoesNotExist:
+                messages.warning(request, '该用户未关联此药企')
+
+        elif action == 'create_user':
+            username = request.POST.get('username', '').strip()
+            password = request.POST.get('password', '')
+            if username and password:
+                if User.objects.filter(username=username).exists():
+                    messages.error(request, f'用户名"{username}"已存在')
+                else:
+                    user = User.objects.create_user(
+                        username=username,
+                        password=password,
+                        user_type='company',
+                        organization=company.company_name,
+                    )
+                    CompanyUser.objects.create(user=user, company=company)
+                    messages.success(request, f'已创建药企用户"{username}"并关联至药企"{company.company_name}"')
+
+        return redirect('supervisor_company_link_user', pk=pk)
+
+    linked_users = CompanyUser.objects.filter(company=company).select_related('user')
+    available_users = User.objects.filter(user_type='company').exclude(
+        pk__in=CompanyUser.objects.filter(company=company).values('user_id')
+    )
+
+    return render(request, 'core/yaoshisuo/company_link_user.html', {
+        'company': company,
+        'linked_users': linked_users,
+        'available_users': available_users,
+    })
+
+
 # ==================== 药事所药品科 ====================
 
 @login_required
@@ -1123,36 +1395,59 @@ def drug_section_drug_list(request):
 
 @login_required
 def drug_section_review_list(request):
-    reviews = DrugPriceReview.objects.all().select_related('drug', 'reviewer')
-    
+    """药事所药品科 - 药品挂网价审核：审核药企提交的申报价"""
+    reviews = DrugPriceReview.objects.all().select_related('drug', 'reviewer').order_by('-created_at')
+
+    drug_code = request.GET.get('drug_code')
+    generic_name = request.GET.get('generic_name')
     status = request.GET.get('status')
-    
+
+    if drug_code:
+        reviews = reviews.filter(drug__code__icontains=drug_code)
+    if generic_name:
+        reviews = reviews.filter(drug__generic_name__icontains=generic_name)
     if status:
         reviews = reviews.filter(status=status)
-    
+    else:
+        # 默认显示待整改的
+        reviews = reviews.filter(status=DrugRecordStatus.PENDING)
+
     paginator = Paginator(reviews, 20)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
-    
-    return render(request, 'core/yaoqi/record_list.html', {'page_obj': page_obj})
+
+    return render(request, 'core/yaoqi/review_list.html', {'page_obj': page_obj})
 
 
 @login_required
 def drug_section_review_approve(request, pk):
     review = get_object_or_404(DrugPriceReview, pk=pk)
     action = request.POST.get('action')
-    
+
     if action == 'approve':
         review.status = DrugRecordStatus.APPROVED
+        # 更新药品挂网价为审核通过的整改价
         review.drug.network_price = review.proposed_price
         review.drug.save()
+        # 联动更新：将该药品相关的药企申报记录状态也更新为审核通过
+        CompanyRecord.objects.filter(
+            drug=review.drug,
+            declared_price=review.proposed_price,
+            status=DrugRecordStatus.SUBMITTED,
+        ).update(status=DrugRecordStatus.APPROVED)
     elif action == 'reject':
         review.status = DrugRecordStatus.REJECTED
-    
+        # 联动更新：将该药品相关的药企申报记录状态也更新为审核不通过
+        CompanyRecord.objects.filter(
+            drug=review.drug,
+            declared_price=review.proposed_price,
+            status=DrugRecordStatus.SUBMITTED,
+        ).update(status=DrugRecordStatus.REJECTED)
+
     review.reviewer = request.user
     review.reviewed_at = datetime.now()
     review.save()
-    
+
     messages.success(request, '审核完成')
     return redirect('drug_section_review_list')
 
@@ -1178,7 +1473,7 @@ def drug_section_company_import(request):
     if request.method == 'POST':
         excel_file = request.FILES.get('excel_file')
         df = pd.read_excel(excel_file)
-        
+
         for _, row in df.iterrows():
             PharmaceuticalCompany.objects.update_or_create(
                 company_code=str(row.get('机构编码', '')),
@@ -1188,11 +1483,93 @@ def drug_section_company_import(request):
                     'phone': str(row.get('电话', '')),
                 }
             )
-        
+
         messages.success(request, f'成功导入 {len(df)} 条药企数据')
         return redirect('drug_section_company_list')
-    
+
     return render(request, 'core/yaoqi/company_import.html')
+
+
+@login_required
+def drug_section_company_create(request):
+    if request.method == 'POST':
+        PharmaceuticalCompany.objects.create(
+            company_code=request.POST.get('company_code'),
+            company_name=request.POST.get('company_name'),
+            contact_person=request.POST.get('contact_person'),
+            phone=request.POST.get('phone'),
+            address=request.POST.get('address'),
+        )
+        messages.success(request, '药企创建成功')
+        return redirect('drug_section_company_list')
+    return render(request, 'core/yaoshisuo/company_form.html')
+
+
+@login_required
+def drug_section_company_delete(request, pk):
+    company = get_object_or_404(PharmaceuticalCompany, pk=pk)
+    company.delete()
+    messages.success(request, '药企删除成功')
+    return redirect('drug_section_company_list')
+
+
+@login_required
+def drug_section_company_link_user(request, pk):
+    """药事所药品科 - 药企编码关系维护：关联药企与用户账号"""
+    company = get_object_or_404(PharmaceuticalCompany, pk=pk)
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        user_id = request.POST.get('user_id')
+
+        if action == 'link' and user_id:
+            user = get_object_or_404(User, pk=user_id)
+            user.user_type = 'company'
+            user.organization = company.company_name
+            user.save()
+            CompanyUser.objects.update_or_create(
+                user=user,
+                defaults={'company': company},
+            )
+            messages.success(request, f'已将用户"{user.username}"关联至药企"{company.company_name}"')
+
+        elif action == 'unlink' and user_id:
+            user = get_object_or_404(User, pk=user_id)
+            try:
+                cu = CompanyUser.objects.get(user=user, company=company)
+                cu.delete()
+                messages.success(request, f'已解除用户"{user.username}"与药企"{company.company_name}"的关联')
+            except CompanyUser.DoesNotExist:
+                messages.warning(request, '该用户未关联此药企')
+
+        elif action == 'create_user':
+            username = request.POST.get('username', '').strip()
+            password = request.POST.get('password', '')
+            if username and password:
+                if User.objects.filter(username=username).exists():
+                    messages.error(request, f'用户名"{username}"已存在')
+                else:
+                    user = User.objects.create_user(
+                        username=username,
+                        password=password,
+                        user_type='company',
+                        organization=company.company_name,
+                    )
+                    CompanyUser.objects.create(user=user, company=company)
+                    messages.success(request, f'已创建药企用户"{username}"并关联至药企"{company.company_name}"')
+
+        return redirect('drug_section_company_link_user', pk=pk)
+
+    linked_users = CompanyUser.objects.filter(company=company).select_related('user')
+    available_users = User.objects.filter(user_type='company').exclude(
+        pk__in=CompanyUser.objects.filter(company=company).values('user_id')
+    )
+
+    return render(request, 'core/yaoqi/company_link_user.html', {
+        'company': company,
+        'linked_users': linked_users,
+        'available_users': available_users,
+    })
 
 
 # ==================== 药店端 ====================
@@ -1272,54 +1649,107 @@ def pharmacy_drug_list(request):
 def pharmacy_record_submit(request):
     if request.method == 'POST':
         excel_file = request.FILES.get('excel_file')
-        record_date = request.POST.get('record_date')
-        if record_date and len(record_date) == 7:
+        record_date = request.POST.get('record_date', '').strip()
+
+        if not excel_file:
+            messages.error(request, '请选择要上传的Excel文件')
+            return redirect('pharmacy_record_submit')
+
+        if not record_date:
+            messages.error(request, '请选择数据年月')
+            return redirect('pharmacy_record_submit')
+
+        # 处理年月格式：YYYY-MM → YYYY-MM-DD (取当月第一天)
+        if len(record_date) == 7:
             record_date = record_date + '-01'
+        elif len(record_date) == 10:
+            pass  # 已经是 YYYY-MM-DD 格式
+        else:
+            messages.error(request, f'日期格式不正确：{record_date}')
+            return redirect('pharmacy_record_submit')
 
-        df = pd.read_excel(excel_file)
-
+        # 获取当前药店用户关联的药店
         pharmacy = None
         if request.user.user_type == 'pharmacy':
             try:
                 pharmacy = request.user.pharmacy_profile.pharmacy
-            except:
+            except PharmacyUser.DoesNotExist:
                 pharmacy = None
-        
+
         if not pharmacy:
-            messages.error(request, '未绑定药店')
+            messages.error(request, '您的账号尚未关联药店，请联系药事所监督科进行药店编码关系维护。')
             return redirect('pharmacy_record_submit')
-        
+
+        try:
+            df = pd.read_excel(excel_file)
+        except Exception as e:
+            messages.error(request, f'Excel文件读取失败：{str(e)}，请确认文件格式正确')
+            return redirect('pharmacy_record_submit')
+
+        if len(df) == 0:
+            messages.error(request, 'Excel文件中没有数据')
+            return redirect('pharmacy_record_submit')
+
         success_count = 0
+        skip_count = 0
         error_messages = []
-        
+        current_pharmacy_name = pharmacy.pharmacy_name
+
         for idx, row in df.iterrows():
-            drug_code = str(row.get('统编代码', ''))
+            row_num = idx + 2  # Excel行号（第1行是表头）
+            drug_code = str(row.get('统编代码', '')).strip()
             record_price = extract_number(row.get('备案价', 0))
+
+            # 校验药店名称：如果Excel中包含药店名称列，则必须与当前药店名称一致
+            excel_pharmacy_name = row.get('药店名称', '')
+            if excel_pharmacy_name and str(excel_pharmacy_name).strip():
+                excel_name = str(excel_pharmacy_name).strip()
+                if excel_name != current_pharmacy_name:
+                    error_messages.append(
+                        f'第{row_num}行：药店名称"{excel_name}"与当前登录药店"{current_pharmacy_name}"不一致，'
+                        f'只能提交本药店的备案价数据'
+                    )
+                    skip_count += 1
+                    continue
+
+            if not drug_code:
+                error_messages.append(f'第{row_num}行：统编代码不能为空')
+                skip_count += 1
+                continue
+
             drug = Drug.objects.filter(code=drug_code).first()
-            
             if not drug:
-                error_messages.append(f'第{idx+1}行：药品{drug_code}不存在')
+                error_messages.append(f'第{row_num}行：统编代码"{drug_code}"对应的药品不存在')
+                skip_count += 1
                 continue
-            
+
             if record_price <= 0:
-                error_messages.append(f'第{idx+1}行：备案价必须大于0')
+                error_messages.append(f'第{row_num}行：备案价必须大于0，当前值为{record_price}')
+                skip_count += 1
                 continue
-            
+
+            # 价格校验：备案价需在挂网价的合理范围内
             network_price = drug.network_price
-            if network_price <= 0:
-                error_messages.append(f'第{idx+1}行：药品{drug_code}挂网价为0，无法验证')
-                continue
-            
-            max_price = network_price * Decimal('1.15')
-            min_price = network_price / Decimal('1.3')
-            
-            if record_price > max_price:
-                error_messages.append(f'第{idx+1}行：备案价{record_price}高于挂网价1.15倍({max_price})')
-                continue
-            if record_price < min_price:
-                error_messages.append(f'第{idx+1}行：备案价{record_price}低于挂网价1/1.3倍({min_price})')
-                continue
-            
+            if network_price > 0:
+                max_price = round(network_price * Decimal('1.15'), 2)
+                min_price = round(network_price / Decimal('1.3'), 2)
+
+                if record_price > max_price:
+                    error_messages.append(
+                        f'第{row_num}行：备案价{record_price}元高于挂网价1.15倍上限{max_price}元 '
+                        f'(药品：{drug.generic_name}，挂网价：{network_price}元)'
+                    )
+                    skip_count += 1
+                    continue
+                if record_price < min_price:
+                    error_messages.append(
+                        f'第{row_num}行：备案价{record_price}元低于挂网价1/1.3倍下限{min_price}元 '
+                        f'(药品：{drug.generic_name}，挂网价：{network_price}元)'
+                    )
+                    skip_count += 1
+                    continue
+
+            # 创建或更新备案价记录
             PharmacyRecord.objects.update_or_create(
                 pharmacy=pharmacy,
                 drug=drug,
@@ -1330,15 +1760,22 @@ def pharmacy_record_submit(request):
                 }
             )
             success_count += 1
-        
+
+        # 汇总反馈
         if success_count > 0:
-            messages.success(request, f'成功提交 {success_count} 条备案价')
+            messages.success(request, f'成功提交 {success_count} 条备案价记录')
+        if skip_count > 0:
+            messages.warning(request, f'跳过 {skip_count} 条记录（详见下方提示）')
         if error_messages:
-            for msg in error_messages[:10]:
+            for msg in error_messages[:20]:
                 messages.warning(request, msg)
-        
+            if len(error_messages) > 20:
+                messages.warning(request, f'...还有 {len(error_messages) - 20} 条错误未显示')
+        if success_count == 0 and skip_count == 0:
+            messages.error(request, '没有提交任何数据，请检查Excel文件内容')
+
         return redirect('pharmacy_record_list')
-    
+
     return render(request, 'core/yaodian/record_submit.html')
 
 
@@ -1405,36 +1842,123 @@ def company_drug_list(request):
 def company_record_submit(request):
     if request.method == 'POST':
         excel_file = request.FILES.get('excel_file')
-        record_date = request.POST.get('record_date')
-        if record_date and len(record_date) == 7:
+        record_date = request.POST.get('record_date', '').strip()
+
+        if not excel_file:
+            messages.error(request, '请选择要上传的Excel文件')
+            return redirect('company_record_submit')
+
+        if not record_date:
+            messages.error(request, '请选择数据年月')
+            return redirect('company_record_submit')
+
+        # 处理年月格式：YYYY-MM → YYYY-MM-DD
+        if len(record_date) == 7:
             record_date = record_date + '-01'
+        elif len(record_date) == 10:
+            pass
+        else:
+            messages.error(request, f'日期格式不正确：{record_date}')
+            return redirect('company_record_submit')
 
-        df = pd.read_excel(excel_file)
-
+        # 获取当前药企用户关联的企业
         company = None
         if request.user.user_type == 'company':
             try:
                 company = request.user.company_profile.company
-            except:
+            except CompanyUser.DoesNotExist:
                 company = None
-        
-        for _, row in df.iterrows():
-            drug_code = str(row.get('统编代码', ''))
+
+        if not company:
+            messages.error(request, '您的账号尚未关联药企，请联系药事所药品科进行药企编码关系维护。')
+            return redirect('company_record_submit')
+
+        try:
+            df = pd.read_excel(excel_file)
+        except Exception as e:
+            messages.error(request, f'Excel文件读取失败：{str(e)}，请确认文件格式正确')
+            return redirect('company_record_submit')
+
+        if len(df) == 0:
+            messages.error(request, 'Excel文件中没有数据')
+            return redirect('company_record_submit')
+
+        success_count = 0
+        skip_count = 0
+        error_messages = []
+        current_company_name = company.company_name
+
+        for idx, row in df.iterrows():
+            row_num = idx + 2
+            drug_code = str(row.get('统编代码', '')).strip()
+            declared_price = extract_number(row.get('申报价', 0))
+
+            # 校验药企名称：如果Excel中包含企业名称列，则必须与当前药企名称一致
+            excel_company_name = row.get('企业名称', row.get('药企名称', ''))
+            if excel_company_name and str(excel_company_name).strip():
+                excel_name = str(excel_company_name).strip()
+                if excel_name != current_company_name:
+                    error_messages.append(
+                        f'第{row_num}行：企业名称"{excel_name}"与当前登录药企"{current_company_name}"不一致，'
+                        f'只能提交本药企的申报价数据'
+                    )
+                    skip_count += 1
+                    continue
+
+            if not drug_code:
+                error_messages.append(f'第{row_num}行：统编代码不能为空')
+                skip_count += 1
+                continue
+
             drug = Drug.objects.filter(code=drug_code).first()
-            if drug and company:
-                CompanyRecord.objects.update_or_create(
-                    company=company,
+            if not drug:
+                error_messages.append(f'第{row_num}行：统编代码"{drug_code}"对应的药品不存在')
+                skip_count += 1
+                continue
+
+            if declared_price <= 0:
+                error_messages.append(f'第{row_num}行：申报价必须大于0，当前值为{declared_price}')
+                skip_count += 1
+                continue
+
+            # 创建药企申报价记录
+            record, created = CompanyRecord.objects.update_or_create(
+                company=company,
+                drug=drug,
+                record_date=record_date,
+                defaults={
+                    'declared_price': declared_price,
+                    'status': DrugRecordStatus.SUBMITTED,
+                }
+            )
+
+            # 联动：自动创建药品挂网价审核记录（供药事所药品科审核）
+            if drug.network_price > 0 and declared_price != drug.network_price:
+                DrugPriceReview.objects.get_or_create(
                     drug=drug,
-                    record_date=record_date,
-                    defaults={
-                        'declared_price': extract_number(row.get('申报价', 0)),
-                        'status': DrugRecordStatus.SUBMITTED,
-                    }
+                    original_price=drug.network_price,
+                    proposed_price=declared_price,
+                    status=DrugRecordStatus.PENDING,
+                    defaults={'comment': f'药企"{current_company_name}"申报，待药品科审核'},
                 )
-        
-        messages.success(request, f'成功提交申报价')
+
+            success_count += 1
+
+        # 汇总反馈
+        if success_count > 0:
+            messages.success(request, f'成功提交 {success_count} 条申报价记录，已自动提交至药品科审核')
+        if skip_count > 0:
+            messages.warning(request, f'跳过 {skip_count} 条记录（详见下方提示）')
+        if error_messages:
+            for msg in error_messages[:20]:
+                messages.warning(request, msg)
+            if len(error_messages) > 20:
+                messages.warning(request, f'...还有 {len(error_messages) - 20} 条错误未显示')
+        if success_count == 0 and skip_count == 0:
+            messages.error(request, '没有提交任何数据，请检查Excel文件内容')
+
         return redirect('company_record_list')
-    
+
     return render(request, 'core/yaoqi/record_submit.html')
 
 

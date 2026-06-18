@@ -1,19 +1,22 @@
 {% extends 'core/base.html' %}
 
-{% block title %}药企列表{% endblock %}
+{% block title %}药企编码关系维护 - 药事所药品科{% endblock %}
 
 {% block sidebar %}
-<div class="p-3"><h5>导航菜单</h5></div>
+<div class="p-3"><h5>药品科功能菜单</h5></div>
 <a href="{% url 'drug_section_drug_list' %}">药品挂网价查询</a>
-<a href="{% url 'drug_section_review_list' %}">价格审核</a>
-<a href="{% url 'drug_section_company_list' %}">药企列表</a>
-<a href="{% url 'drug_section_company_import' %}">导入药企</a>
+<a href="{% url 'drug_section_review_list' %}">挂网价审核</a>
+<a href="{% url 'drug_section_company_list' %}">药企编码关系维护</a>
 {% endblock %}
 
 {% block content %}
-<h2>药企列表</h2>
+<h2>药企编码关系维护</h2>
+<div class="alert alert-info mb-3">
+    <strong>功能说明：</strong>管理药企基础信息及药企与用户账号的编码关系。药企用户关联后可通过"药品挂网价申报"功能提交挂网价格，提交后自动进入本模块的"挂网价审核"流程。
+</div>
 <div class="mb-3">
-    <a href="{% url 'drug_section_company_import' %}" class="btn btn-primary">导入药企</a>
+    <a href="{% url 'drug_section_company_import' %}" class="btn btn-primary">批量导入药企</a>
+    <a href="{% url 'drug_section_company_create' %}" class="btn btn-success">新增药企</a>
 </div>
 <form method="get" class="row g-3 mb-3">
     <div class="col-md-4">
@@ -25,13 +28,15 @@
     </div>
 </form>
 
-<table class="table table-striped">
-    <thead>
+<table class="table table-striped table-hover">
+    <thead class="table-dark">
         <tr>
             <th>机构编码</th>
             <th>企业名称</th>
             <th>联系人</th>
             <th>电话</th>
+            <th>地址</th>
+            <th>操作</th>
         </tr>
     </thead>
     <tbody>
@@ -41,22 +46,17 @@
             <td>{{ company.company_name }}</td>
             <td>{{ company.contact_person|default:'-' }}</td>
             <td>{{ company.phone|default:'-' }}</td>
+            <td>{{ company.address|default:'-'|truncatechars:20 }}</td>
+            <td>
+                <a href="{% url 'drug_section_company_link_user' company.pk %}" class="btn btn-sm btn-info">编码关系维护</a>
+                <a href="{% url 'drug_section_company_delete' company.pk %}" class="btn btn-sm btn-danger" onclick="return confirm('确定删除药企"{{ company.company_name }}"？')">删除</a>
+            </td>
         </tr>
         {% empty %}
-        <tr><td colspan="4" class="text-center">暂无数据</td></tr>
+        <tr><td colspan="6" class="text-center">暂无药企数据，请先导入药企</td></tr>
         {% endfor %}
     </tbody>
 </table>
 
-<nav>
-    <ul class="pagination">
-        {% if page_obj.has_previous %}
-        <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">上一页</a></li>
-        {% endif %}
-        <li class="page-item active"><span class="page-link">第 {{ page_obj.number }} / {{ page_obj.paginator.num_pages }} 页</span></li>
-        {% if page_obj.has_next %}
-        <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">下一页</a></li>
-        {% endif %}
-    </ul>
-</nav>
+{% include 'core/includes/pagination.html' %}
 {% endblock %}

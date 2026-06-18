@@ -308,6 +308,7 @@ class Pharmacy(models.Model):
     pharmacy_name = models.CharField(max_length=200, verbose_name='药店名称')
     medical_insurance_code = models.CharField(max_length=50, verbose_name='医保编码')
     district = models.CharField(max_length=50, verbose_name='区县')
+    district_fk = models.ForeignKey('District', on_delete=models.SET_NULL, null=True, blank=True, related_name='pharmacies', verbose_name='所属区县')
     address = models.CharField(max_length=300, blank=True, verbose_name='地址')
     phone = models.CharField(max_length=20, blank=True, verbose_name='电话')
     created_at = models.DateTimeField(auto_now_add=True)

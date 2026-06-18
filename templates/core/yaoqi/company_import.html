@@ -1,17 +1,16 @@
 {% extends 'core/base.html' %}
 
-{% block title %}导入药企{% endblock %}
+{% block title %}批量导入药企 - 药事所药品科{% endblock %}
 
 {% block sidebar %}
-<div class="p-3"><h5>导航菜单</h5></div>
+<div class="p-3"><h5>药品科功能菜单</h5></div>
 <a href="{% url 'drug_section_drug_list' %}">药品挂网价查询</a>
-<a href="{% url 'drug_section_review_list' %}">价格审核</a>
-<a href="{% url 'drug_section_company_list' %}">药企列表</a>
-<a href="{% url 'drug_section_company_import' %}">导入药企</a>
+<a href="{% url 'drug_section_review_list' %}">挂网价审核</a>
+<a href="{% url 'drug_section_company_list' %}">药企编码关系维护</a>
 {% endblock %}
 
 {% block content %}
-<h2>导入药企编码关系</h2>
+<h2>批量导入药企</h2>
 <div class="card">
     <div class="card-body">
         <form method="post" enctype="multipart/form-data">
@@ -19,16 +18,22 @@
             <div class="mb-3">
                 <label class="form-label">选择Excel文件</label>
                 <input type="file" name="excel_file" class="form-control" accept=".xlsx,.xls" required>
+                <small class="text-muted">支持 .xlsx 和 .xls 格式</small>
             </div>
             <div class="alert alert-info">
                 <p><strong>Excel文件需包含以下列：</strong></p>
-                <ul>
-                    <li>机构编码（必填）</li>
-                    <li>企业名称（必填）</li>
-                </ul>
+                <table class="table table-sm table-bordered">
+                    <thead><tr><th>列名</th><th>是否必填</th><th>说明</th></tr></thead>
+                    <tbody>
+                        <tr><td>机构编码</td><td>必填</td><td>药企的唯一机构编码</td></tr>
+                        <tr><td>企业名称</td><td>必填</td><td>药企的全称</td></tr>
+                        <tr><td>联系人</td><td>可选</td><td>企业联系人姓名</td></tr>
+                        <tr><td>电话</td><td>可选</td><td>联系电话</td></tr>
+                    </tbody>
+                </table>
             </div>
-            <button type="submit" class="btn btn-primary">导入</button>
-            <a href="{% url 'drug_section_company_list' %}" class="btn btn-secondary">返回</a>
+            <button type="submit" class="btn btn-primary">开始导入</button>
+            <a href="{% url 'drug_section_company_list' %}" class="btn btn-secondary">返回列表</a>
         </form>
     </div>
 </div>

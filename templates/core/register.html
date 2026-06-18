@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>注册 - 医保药品价格检测系统</title>
+    <title>注册 - 药品价格监测监管系统</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); height: 100vh; display: flex; align-items: center; justify-content: center; }
@@ -50,8 +50,12 @@
                 </select>
             </div>
             <div class="mb-3" id="orgField" style="display:none;">
-                <label class="form-label">所属机构</label>
-                <input type="text" name="organization" class="form-control" placeholder="如：浦东新区、黄浦区">
+                <label class="form-label">所属机构/药店名称/企业名称</label>
+                <input type="text" name="organization" class="form-control" placeholder="药店用户填写药店名称、药企用户填写企业名称、区县用户填写区县名称">
+            </div>
+            <div class="mb-3" id="insuranceField" style="display:none;">
+                <label class="form-label">医保编码（药店用户必填）</label>
+                <input type="text" name="medical_insurance_code" class="form-control" placeholder="请输入医保编码">
             </div>
             <div class="mb-3">
                 <label class="form-label">联系电话</label>
@@ -67,10 +71,16 @@
         function toggleOrgField() {
             var userType = document.querySelector('select[name="user_type"]').value;
             var orgField = document.getElementById('orgField');
+            var insuranceField = document.getElementById('insuranceField');
             if (userType === 'district' || userType === 'pharmacy' || userType === 'company') {
                 orgField.style.display = 'block';
             } else {
                 orgField.style.display = 'none';
+            }
+            if (userType === 'pharmacy') {
+                insuranceField.style.display = 'block';
+            } else {
+                insuranceField.style.display = 'none';
             }
         }
     </script>
